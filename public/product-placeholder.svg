@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <rect width="400" height="400" fill="#EFE2CC" />
+  <g transform="translate(200,200)" fill="#2E4A3B" opacity="0.85">
+    <ellipse cx="-40" cy="-10" rx="55" ry="70" transform="rotate(-20)" />
+    <ellipse cx="40" cy="10" rx="55" ry="70" transform="rotate(15)" />
+    <ellipse cx="0" cy="-60" rx="45" ry="55" transform="rotate(5)" fill="#C89B3C" opacity="0.9" />
+  </g>
+  <text x="200" y="360" font-family="Georgia, serif" font-size="20" fill="#5C4033" text-anchor="middle">Sehat Potli</text>
+</svg>

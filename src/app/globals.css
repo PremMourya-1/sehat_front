@@ -1,0 +1,129 @@
+@import "tailwindcss";
+
+:root {
+  /* Sehat Potli — premium dry fruits & nuts palette */
+  --background: #f5ede0; /* Warm Cream / Ivory */
+  --surface: #fffdf8; /* near-white cream, cards */
+  --surface-alt: #efe2cc; /* deeper cream, alternate sections */
+  --foreground: #2a2a28; /* Charcoal body text */
+  --secondary-text: #5c4033; /* Earthy Brown secondary text */
+  --btn-primary: #2e4a3b; /* Deep Forest Green */
+  --btn-primary-hover: #23392c; /* darker forest green */
+  --primary: #2e4a3b; /* Deep Forest Green — brand/headers */
+  --accent: #c89b3c; /* Mustard Gold — CTAs / hover states */
+  --accent-secondary: #6b1f2a; /* Deep Maroon/Wine — premium badge accent */
+  --earthy: #5c4033; /* Earthy Brown — supporting neutral */
+  --border-color: #d9c7b2; /* light earthy-brown tint */
+
+  /* derived / utility tones (neutral, not new brand colors) */
+  --success: #3f7d4f;
+  --warning: #b8860b;
+  --danger: #a4342a;
+  --info: #3b6ea5;
+  --muted: #9a9186;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-alt: var(--surface-alt);
+  --color-foreground: var(--foreground);
+  --color-secondary-text: var(--secondary-text);
+  --color-btn-primary: var(--btn-primary);
+  --color-btn-primary-hover: var(--btn-primary-hover);
+  --color-primary: var(--primary);
+  --color-accent: var(--accent);
+  --color-accent-secondary: var(--accent-secondary);
+  --color-earthy: var(--earthy);
+  --color-border-color: var(--border-color);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --color-muted: var(--muted);
+
+  --font-heading: var(--font-playfair);
+  --font-accent: var(--font-yeseva);
+  --font-sans: var(--font-poppins);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), sans-serif;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--surface);
+}
+
+/* Animations */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes kenBurns {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.12);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.8s ease-out both;
+}
+
+.animate-fade-in {
+  animation: fadeIn 1s ease-out both;
+}
+
+.animate-ken-burns {
+  animation: kenBurns 12s ease-out forwards;
+}
+
+.animation-delay-100 {
+  animation-delay: 0.1s;
+}
+.animation-delay-200 {
+  animation-delay: 0.2s;
+}
+.animation-delay-300 {
+  animation-delay: 0.3s;
+}
+
+/* Simple scrollbar hide utility used by horizontally scrolling rows */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
