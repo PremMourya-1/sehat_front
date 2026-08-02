@@ -4,11 +4,13 @@ import {
   blogUrl,
   cartUrl,
   categoryUrl,
+  checkoutUrl,
   cmsUrl,
   couponUrl,
   faqUrl,
   heroBannerUrl,
   homeUrl,
+  mobileUrl,
   newsletterUrl,
   orderUrl,
   productUrl,
@@ -16,15 +18,19 @@ import {
   testimonialUrl,
 } from "@/Service/url";
 
-// Auth (customer)
+// Checkout-time mobile number OTP verification (sign-in itself is handled
+// by NextAuth — see src/auth.js / next-auth/react's signIn/signOut).
+export const mobileApi = {
+  sendOtp: (mobileNumber) => apiJson.post(mobileUrl.sendOtp, { mobileNumber }),
+  verifyOtp: (mobileNumber, otp) => apiJson.post(mobileUrl.verifyOtp, { mobileNumber, otp }),
+};
+
+// Registration (name/email/password + 6-digit email OTP). Actual sign-in
+// after verifying happens via next-auth/react's signIn("credentials", ...).
 export const authApi = {
   register: (data) => apiJson.post(authUrl.register, data),
   verifyOtp: (data) => apiJson.post(authUrl.verifyOtp, data),
   resendOtp: (data) => apiJson.post(authUrl.resendOtp, data),
-  login: (data) => apiJson.post(authUrl.login, data),
-  logout: () => apiJson.post(authUrl.logout),
-  profile: () => apiJson.get(authUrl.profile),
-  changePassword: (data) => apiJson.put(authUrl.changePassword, data),
 };
 
 // Products
@@ -57,6 +63,15 @@ export const orderApi = {
   list: (params) => apiJson.get(orderUrl.list, { params }),
   recent: () => apiJson.get(orderUrl.recent),
   getById: (id) => apiJson.get(orderUrl.byId(id)),
+};
+
+// Checkout (pincode serviceability + COD availability checks are public, no
+// auth needed; verifyPayment requires the customer's auth token, attached
+// automatically by apiJson's interceptor — see Service/service.js)
+export const checkoutApi = {
+  checkPincode: (pincode) => apiJson.get(checkoutUrl.checkPincode, { params: { pincode } }),
+  checkCodAvailability: (items) => apiJson.post(checkoutUrl.codAvailability, { items }),
+  verifyPayment: (data) => apiJson.post(checkoutUrl.verifyPayment, data),
 };
 
 // Coupons

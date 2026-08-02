@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FiAlertCircle } from "react-icons/fi";
 import ProductGallery from "@/Components/Product/ProductGallery";
 import ProductTags from "@/Components/Product/ProductTags";
 import ProductDetailInteractive from "@/Components/Product/ProductDetailInteractive";
@@ -76,33 +77,43 @@ export default async function ProductDetailPage({ params }) {
 
           <ProductDetailInteractive product={product} />
 
+          {product.codAvailable === false && (
+            <p className="flex items-center gap-1.5 text-sm text-(--danger)">
+              <FiAlertCircle size={14} /> Cash on Delivery is not available for this product
+            </p>
+          )}
+
           <DeliveryAndSubscribe />
           <OriginAndCertifications product={product} />
         </div>
       </div>
 
-      {product.longDescription && (
-        <div className="mt-14 border-t border-(--border-color) pt-10">
-          <h2 className="mb-4 font-heading text-2xl text-(--primary)">
-            Product Details
-          </h2>
-          <div
-            className="prose prose-sm max-w-none text-(--secondary-text)"
-            dangerouslySetInnerHTML={{ __html: product.longDescription }}
-          />
-        </div>
-      )}
+      <div className="mt-10 flex flex-col gap-6 md:mt-14">
+        {product.longDescription && (
+          <section className="rounded-2xl border border-(--border-color) bg-(--surface) p-5 shadow-sm md:p-6">
+            <h2 className="mb-4 font-heading text-xl text-(--primary) md:text-2xl">
+              Product Details
+            </h2>
+            <div
+              className="prose prose-sm max-w-none text-(--secondary-text)"
+              dangerouslySetInnerHTML={{ __html: product.longDescription }}
+            />
+          </section>
+        )}
 
-      <div className="mt-14 border-t border-(--border-color) pt-10">
-        <NutritionAndComposition product={product} />
-      </div>
+        {(product.nutrition || product.composition?.length > 0) && (
+          <section className="rounded-2xl border border-(--border-color) bg-(--surface) p-5 shadow-sm md:p-6">
+            <NutritionAndComposition product={product} />
+          </section>
+        )}
 
-      <div className="mt-10 grid grid-cols-1 gap-10 md:grid-cols-2">
-        <ShelfLifeAndServing product={product} />
-      </div>
+        <section className="rounded-2xl border border-(--border-color) bg-(--surface) p-5 shadow-sm md:p-6">
+          <ShelfLifeAndServing product={product} />
+        </section>
 
-      <div className="mt-14 border-t border-(--border-color) pt-10">
-        <ProductReviews productId={product.id} productName={product.name} reviews={reviews} />
+        <section className="rounded-2xl border border-(--border-color) bg-(--surface) p-5 shadow-sm md:p-6">
+          <ProductReviews productId={product.id} productName={product.name} reviews={reviews} />
+        </section>
       </div>
 
       <RelatedProducts categoryId={product.categoryId} excludeId={product.id} />

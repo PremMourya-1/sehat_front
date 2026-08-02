@@ -4,6 +4,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { FiMail, FiMapPin, FiPhone } from "react-icons/fi";
 import Button from "@/Components/Button/Button";
+import FloatingLabelInput from "@/Components/Form/FloatingLabelInput";
 
 const initialForm = { name: "", email: "", message: "" };
 
@@ -56,28 +57,29 @@ export default function ContactPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <input
+          <FloatingLabelInput
+            id="contact-name"
             required
-            placeholder="Your name"
+            label="Your name"
             value={form.name}
             onChange={handleChange("name")}
-            className="rounded-lg border border-(--border-color) bg-(--surface) px-4 py-2.5 text-sm outline-none focus:border-(--primary)"
           />
-          <input
+          <FloatingLabelInput
+            id="contact-email"
             type="email"
             required
-            placeholder="Your email"
+            label="Your email"
             value={form.email}
             onChange={handleChange("email")}
-            className="rounded-lg border border-(--border-color) bg-(--surface) px-4 py-2.5 text-sm outline-none focus:border-(--primary)"
           />
-          <textarea
+          <FloatingLabelInput
+            as="textarea"
+            id="contact-message"
             required
             rows={5}
-            placeholder="Your message"
+            label="Your message"
             value={form.message}
             onChange={handleChange("message")}
-            className="rounded-lg border border-(--border-color) bg-(--surface) px-4 py-2.5 text-sm outline-none focus:border-(--primary)"
           />
           <Button type="submit" className="w-fit">
             Send Message

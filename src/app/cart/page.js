@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useDispatch, useSelector } from "react-redux";
 import { FiMinus, FiPlus, FiTrash2 } from "react-icons/fi";
 import {
@@ -11,7 +12,6 @@ import {
   selectCartSubtotal,
   updateQuantity,
 } from "@/Store/Slices/cartSlice";
-import { selectAuthUser } from "@/Store/Slices/authSlice";
 import { openAuthModal } from "@/Store/Slices/uiSlice";
 import Button from "@/Components/Button/Button";
 import { formatPrice, resolveImageUrl } from "@/Utils/utils";
@@ -21,10 +21,10 @@ export default function CartPage() {
   const router = useRouter();
   const items = useSelector(selectCartItems);
   const subtotal = useSelector(selectCartSubtotal);
-  const authUser = useSelector(selectAuthUser);
+  const { status } = useSession();
 
   const handleCheckout = () => {
-    if (!authUser) {
+    if (status !== "authenticated") {
       dispatch(openAuthModal({ view: "login", redirectTo: "/checkout" }));
       return;
     }

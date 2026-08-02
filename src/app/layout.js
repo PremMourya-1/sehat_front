@@ -1,6 +1,7 @@
 import { Playfair_Display, Yeseva_One, Poppins } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import StoreProvider from "@/Store/StoreProvider";
+import AuthSessionProvider from "@/Providers/AuthSessionProvider";
 import Header from "@/Components/Common/Header/Header";
 import Footer from "@/Components/Common/Footer/Footer";
 import AuthModal from "@/Components/Auth/AuthModal";
@@ -39,22 +40,24 @@ export default function RootLayout({ children }) {
       <body
         className={`${playfair.variable} ${yeseva.variable} ${poppins.variable} font-sans antialiased bg-background text-foreground`}
       >
-        <StoreProvider>
-          <Header />
-          <main className="min-h-screen">{children}</main>
-          <Footer />
-          <AuthModal />
-          <Toaster
-            position="top-center"
-            toastOptions={{
-              style: {
-                background: "var(--surface)",
-                color: "var(--foreground)",
-                border: "1px solid var(--border-color)",
-              },
-            }}
-          />
-        </StoreProvider>
+        <AuthSessionProvider>
+          <StoreProvider>
+            <Header />
+            <main className="min-h-screen">{children}</main>
+            <Footer />
+            <AuthModal />
+            <Toaster
+              position="top-center"
+              toastOptions={{
+                style: {
+                  background: "var(--surface)",
+                  color: "var(--foreground)",
+                  border: "1px solid var(--border-color)",
+                },
+              }}
+            />
+          </StoreProvider>
+        </AuthSessionProvider>
       </body>
     </html>
   );

@@ -1,55 +1,56 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { useDispatch, useSelector } from "react-redux";
 import toast from "react-hot-toast";
-import { FiX } from "react-icons/fi";
+import { FiX, FiMail } from "react-icons/fi";
 import { authApi } from "@/Service/api";
-import { loginAction } from "@/Store/Slices/authSlice";
 import {
   closeAuthModal,
   selectAuthModalOpen,
   selectAuthModalView,
-  selectPendingEmailForOtp,
   selectRedirectAfterAuth,
   setAuthModalView,
 } from "@/Store/Slices/uiSlice";
-import { AUTH_VIEWS, USER_DETAILS } from "@/Constant/Constant";
-import { setLocalStorageItem } from "@/Utils/localStorage";
+import { AUTH_VIEWS } from "@/Constant/Constant";
 import Button from "@/Components/Button/Button";
+import FloatingLabelInput from "@/Components/Form/FloatingLabelInput";
 
 const RESEND_COOLDOWN = 60;
 
-const initialLoginForm = { email: "", password: "" };
-const initialRegisterForm = { name: "", email: "", mobile: "", password: "" };
+const initialLoginForm = { identifier: "", authCode: "" };
+const initialRegisterForm = { name: "", email: "", password: "" };
 
+// Registration and the login-time "please verify your email first" case
+// both land here — same OTP-entry UI, same auto-login-on-success behavior.
 export default function AuthModal() {
   const dispatch = useDispatch();
-  const router = useRouter();
   const isOpen = useSelector(selectAuthModalOpen);
   const view = useSelector(selectAuthModalView);
   const redirectTo = useSelector(selectRedirectAfterAuth);
-  const pendingEmail = useSelector(selectPendingEmailForOtp);
 
   const [loginForm, setLoginForm] = useState(initialLoginForm);
   const [registerForm, setRegisterForm] = useState(initialRegisterForm);
-  const [otp, setOtp] = useState("");
-  const [otpEmail, setOtpEmail] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const [verifying, setVerifying] = useState(false);
+  const [verifyEmail, setVerifyEmail] = useState("");
+  const [verifyPassword, setVerifyPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
   const [cooldown, setCooldown] = useState(0);
 
   useEffect(() => {
     if (!isOpen) {
       setLoginForm(initialLoginForm);
       setRegisterForm(initialRegisterForm);
+      setVerifying(false);
+      setVerifyEmail("");
+      setVerifyPassword("");
       setOtp("");
     }
   }, [isOpen]);
-
-  useEffect(() => {
-    if (pendingEmail) setOtpEmail(pendingEmail);
-  }, [pendingEmail]);
 
   useEffect(() => {
     if (cooldown <= 0) return undefined;
@@ -59,48 +60,51 @@ export default function AuthModal() {
     return () => clearInterval(timer);
   }, [cooldown]);
 
-  useEffect(() => {
-    if (view === AUTH_VIEWS.OTP) setCooldown(RESEND_COOLDOWN);
-  }, [view]);
-
   if (!isOpen) return null;
 
-  const completeAuth = (user) => {
-    setLocalStorageItem(USER_DETAILS, user);
-    dispatch(loginAction(user));
-    dispatch(closeAuthModal());
-    toast.success("Welcome back!");
-    router.push(redirectTo || "/account");
-  };
-
   const handleClose = () => dispatch(closeAuthModal());
+
+  const callbackUrl =
+    typeof window !== "undefined" ? redirectTo || window.location.pathname : redirectTo || "/";
+
+  const startVerification = (email, password) => {
+    setVerifyEmail(email);
+    setVerifyPassword(password);
+    setOtp("");
+    setVerifying(true);
+    setCooldown(RESEND_COOLDOWN);
+  };
 
   const handleLoginSubmit = async (event) => {
     event.preventDefault();
     setLoading(true);
     try {
-      const res = await authApi.login(loginForm);
-      if (res.data.action) {
-        completeAuth(res.data.data);
-      } else {
-        toast.error(res.data.message || "Login failed");
-      }
-    } catch (error) {
-      const status = error?.response?.status;
-      if (status === 403) {
-        // Account exists but is not OTP-verified yet — trigger a fresh OTP
-        // and drop the user into the verify view.
-        setOtpEmail(loginForm.email);
+      const res = await signIn("credentials", {
+        identifier: loginForm.identifier,
+        authCode: loginForm.authCode,
+        redirect: false,
+        callbackUrl,
+      });
+
+      if (res?.code === "email-not-verified") {
+        // An unverified account can only ever have been matched by email
+        // (mobile numbers are only ever set on already-verified accounts —
+        // mobile verification happens at checkout, which requires login).
+        toast("Please verify your email first — we've sent a new code.");
+        startVerification(loginForm.identifier, loginForm.authCode);
         try {
-          await authApi.resendOtp({ email: loginForm.email });
-          toast("Please verify your account. We've sent a new OTP.");
+          await authApi.resendOtp({ email: loginForm.identifier });
         } catch {
-          toast.error("Could not send OTP. Please try again.");
+          // ignore — user can hit "Resend" manually below
         }
-        dispatch(setAuthModalView(AUTH_VIEWS.OTP));
+      } else if (res?.error) {
+        toast.error("Invalid email/mobile number or password");
       } else {
-        toast.error(error?.response?.data?.message || "Login failed");
+        toast.success("Welcome back!");
+        handleClose();
       }
+    } catch {
+      toast.error("Could not log in. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -112,9 +116,8 @@ export default function AuthModal() {
     try {
       const res = await authApi.register(registerForm);
       if (res.data.action) {
-        setOtpEmail(registerForm.email);
         toast.success(res.data.message || "OTP sent to your email");
-        dispatch(setAuthModalView(AUTH_VIEWS.OTP));
+        startVerification(registerForm.email, registerForm.password);
       } else {
         toast.error(res.data.message || "Registration failed");
       }
@@ -125,27 +128,42 @@ export default function AuthModal() {
     }
   };
 
-  const handleOtpSubmit = async (event) => {
+  const handleVerifyOtp = async (event) => {
     event.preventDefault();
-    setLoading(true);
+    setOtpLoading(true);
     try {
-      const res = await authApi.verifyOtp({ email: otpEmail, otp });
-      if (res.data.action) {
-        completeAuth(res.data.data);
-      } else {
+      const res = await authApi.verifyOtp({ email: verifyEmail, otp });
+      if (!res.data.action) {
         toast.error(res.data.message || "Invalid OTP");
+        return;
+      }
+
+      const signInRes = await signIn("credentials", {
+        identifier: verifyEmail,
+        authCode: verifyPassword,
+        redirect: false,
+        callbackUrl,
+      });
+
+      if (signInRes?.error) {
+        toast.success("Email verified! Please log in.");
+        setVerifying(false);
+        dispatch(setAuthModalView(AUTH_VIEWS.LOGIN));
+      } else {
+        toast.success("You're all set!");
+        handleClose();
       }
     } catch (error) {
       toast.error(error?.response?.data?.message || "Invalid OTP");
     } finally {
-      setLoading(false);
+      setOtpLoading(false);
     }
   };
 
   const handleResendOtp = async () => {
     if (cooldown > 0) return;
     try {
-      await authApi.resendOtp({ email: otpEmail });
+      await authApi.resendOtp({ email: verifyEmail });
       toast.success("OTP resent");
       setCooldown(RESEND_COOLDOWN);
     } catch (error) {
@@ -165,118 +183,30 @@ export default function AuthModal() {
           <FiX size={20} />
         </button>
 
-        {view === AUTH_VIEWS.LOGIN && (
-          <form onSubmit={handleLoginSubmit} className="flex flex-col gap-4">
-            <h2 className="font-heading text-2xl text-(--primary)">Welcome Back</h2>
-            <p className="text-sm text-(--secondary-text)">
-              Login to continue to your Sehat Potli account.
-            </p>
-            <input
-              type="email"
-              required
-              placeholder="Email address"
-              value={loginForm.email}
-              onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-              className="rounded-lg border border-(--border-color) bg-(--background) px-4 py-2.5 text-sm outline-none focus:border-(--primary)"
-            />
-            <input
-              type="password"
-              required
-              placeholder="Password"
-              value={loginForm.password}
-              onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-              className="rounded-lg border border-(--border-color) bg-(--background) px-4 py-2.5 text-sm outline-none focus:border-(--primary)"
-            />
-            <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "Please wait..." : "Login"}
-            </Button>
-            <p className="text-center text-sm text-(--secondary-text)">
-              New to Sehat Potli?{" "}
-              <button
-                type="button"
-                onClick={() => dispatch(setAuthModalView(AUTH_VIEWS.REGISTER))}
-                className="font-medium text-(--primary) underline"
-              >
-                Create an account
-              </button>
-            </p>
-          </form>
-        )}
-
-        {view === AUTH_VIEWS.REGISTER && (
-          <form onSubmit={handleRegisterSubmit} className="flex flex-col gap-4">
-            <h2 className="font-heading text-2xl text-(--primary)">Create Account</h2>
-            <p className="text-sm text-(--secondary-text)">
-              Join Sehat Potli for a healthier, tastier everyday.
-            </p>
-            <input
-              type="text"
-              required
-              placeholder="Full name"
-              value={registerForm.name}
-              onChange={(e) => setRegisterForm({ ...registerForm, name: e.target.value })}
-              className="rounded-lg border border-(--border-color) bg-(--background) px-4 py-2.5 text-sm outline-none focus:border-(--primary)"
-            />
-            <input
-              type="email"
-              required
-              placeholder="Email address"
-              value={registerForm.email}
-              onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
-              className="rounded-lg border border-(--border-color) bg-(--background) px-4 py-2.5 text-sm outline-none focus:border-(--primary)"
-            />
-            <input
-              type="tel"
-              required
-              placeholder="Mobile number"
-              pattern="[0-9]{10}"
-              title="Enter a 10-digit mobile number"
-              value={registerForm.mobile}
-              onChange={(e) => setRegisterForm({ ...registerForm, mobile: e.target.value })}
-              className="rounded-lg border border-(--border-color) bg-(--background) px-4 py-2.5 text-sm outline-none focus:border-(--primary)"
-            />
-            <input
-              type="password"
-              required
-              placeholder="Password"
-              value={registerForm.password}
-              onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
-              className="rounded-lg border border-(--border-color) bg-(--background) px-4 py-2.5 text-sm outline-none focus:border-(--primary)"
-            />
-            <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "Please wait..." : "Create Account"}
-            </Button>
-            <p className="text-center text-sm text-(--secondary-text)">
-              Already have an account?{" "}
-              <button
-                type="button"
-                onClick={() => dispatch(setAuthModalView(AUTH_VIEWS.LOGIN))}
-                className="font-medium text-(--primary) underline"
-              >
-                Login
-              </button>
-            </p>
-          </form>
-        )}
-
-        {view === AUTH_VIEWS.OTP && (
-          <form onSubmit={handleOtpSubmit} className="flex flex-col gap-4">
-            <h2 className="font-heading text-2xl text-(--primary)">Verify OTP</h2>
-            <p className="text-sm text-(--secondary-text)">
-              We&apos;ve sent a 6-digit code to <strong>{otpEmail}</strong>.
-            </p>
-            <input
+        {verifying ? (
+          <form onSubmit={handleVerifyOtp} className="flex flex-col gap-4">
+            <div className="flex flex-col items-center gap-2 pb-2 text-center">
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-(--background) text-(--primary)">
+                <FiMail size={26} />
+              </span>
+              <h2 className="font-heading text-2xl text-(--primary)">Verify Your Email</h2>
+              <p className="text-sm text-(--secondary-text)">
+                We&apos;ve sent a 6-digit code to <strong>{verifyEmail}</strong>.
+              </p>
+            </div>
+            <FloatingLabelInput
+              id="auth-otp"
               type="text"
               required
               inputMode="numeric"
               maxLength={6}
-              placeholder="Enter OTP"
+              label="Enter OTP"
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
-              className="tracking-[0.5em] rounded-lg border border-(--border-color) bg-(--background) px-4 py-2.5 text-center text-lg outline-none focus:border-(--primary)"
+              center
             />
-            <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "Verifying..." : "Verify & Continue"}
+            <Button type="submit" disabled={otpLoading} className="w-full">
+              {otpLoading ? "Verifying..." : "Verify & Continue"}
             </Button>
             <p className="text-center text-sm text-(--secondary-text)">
               Didn&apos;t receive the code?{" "}
@@ -290,6 +220,89 @@ export default function AuthModal() {
               </button>
             </p>
           </form>
+        ) : (
+          <>
+            <div className="mb-5 flex rounded-full bg-(--background) p-1">
+              <button
+                type="button"
+                onClick={() => dispatch(setAuthModalView(AUTH_VIEWS.LOGIN))}
+                className={`flex-1 rounded-full py-2 text-sm font-medium transition-colors ${
+                  view === AUTH_VIEWS.LOGIN
+                    ? "bg-(--btn-primary) text-(--surface)"
+                    : "text-(--secondary-text)"
+                }`}
+              >
+                Login
+              </button>
+              <button
+                type="button"
+                onClick={() => dispatch(setAuthModalView(AUTH_VIEWS.REGISTER))}
+                className={`flex-1 rounded-full py-2 text-sm font-medium transition-colors ${
+                  view === AUTH_VIEWS.REGISTER
+                    ? "bg-(--btn-primary) text-(--surface)"
+                    : "text-(--secondary-text)"
+                }`}
+              >
+                Register
+              </button>
+            </div>
+
+            {view === AUTH_VIEWS.LOGIN ? (
+              <form onSubmit={handleLoginSubmit} className="flex flex-col gap-4">
+                <h2 className="font-heading text-2xl text-(--primary)">Welcome Back</h2>
+                <FloatingLabelInput
+                  id="login-identifier"
+                  type="text"
+                  required
+                  label="Email or mobile number"
+                  value={loginForm.identifier}
+                  onChange={(e) => setLoginForm({ ...loginForm, identifier: e.target.value })}
+                />
+                <FloatingLabelInput
+                  id="login-password"
+                  type="password"
+                  required
+                  label="Password"
+                  value={loginForm.authCode}
+                  onChange={(e) => setLoginForm({ ...loginForm, authCode: e.target.value })}
+                />
+                <Button type="submit" disabled={loading} className="w-full">
+                  {loading ? "Logging in..." : "Login"}
+                </Button>
+              </form>
+            ) : (
+              <form onSubmit={handleRegisterSubmit} className="flex flex-col gap-4">
+                <h2 className="font-heading text-2xl text-(--primary)">Create Account</h2>
+                <FloatingLabelInput
+                  id="register-name"
+                  type="text"
+                  required
+                  label="Full name"
+                  value={registerForm.name}
+                  onChange={(e) => setRegisterForm({ ...registerForm, name: e.target.value })}
+                />
+                <FloatingLabelInput
+                  id="register-email"
+                  type="email"
+                  required
+                  label="Email address"
+                  value={registerForm.email}
+                  onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
+                />
+                <FloatingLabelInput
+                  id="register-password"
+                  type="password"
+                  required
+                  label="Password"
+                  value={registerForm.password}
+                  onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
+                />
+                <Button type="submit" disabled={loading} className="w-full">
+                  {loading ? "Please wait..." : "Sign Up"}
+                </Button>
+              </form>
+            )}
+          </>
         )}
       </div>
     </div>

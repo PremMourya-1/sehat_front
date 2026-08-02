@@ -119,6 +119,25 @@ body {
   animation-delay: 0.3s;
 }
 
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Infinite auto-scrolling row (e.g. Shop by Categories) — render the list
+   twice back to back and this scrolls exactly one copy's width, looping
+   seamlessly. Pauses on hover so users can actually read/click an item. */
+.animate-marquee {
+  animation: marquee linear infinite;
+}
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
 /* Simple scrollbar hide utility used by horizontally scrolling rows */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;

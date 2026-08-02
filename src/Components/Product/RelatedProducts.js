@@ -62,7 +62,7 @@ export default function RelatedProducts({ categoryId, excludeId }) {
   if (initialLoad || products.length === 0) return null;
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-12 md:px-8">
+    <section className="py-12">
       <h2 className="font-heading text-2xl text-(--primary)">You may also like</h2>
       <div className="mt-6 grid grid-cols-2 gap-3 max-[400px]:gap-2 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 md:gap-6">
         {products.map((product) => (

@@ -2,29 +2,34 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useDispatch, useSelector } from "react-redux";
 import toast from "react-hot-toast";
-import { selectAuthUser } from "@/Store/Slices/authSlice";
+import { FiAlertCircle, FiCheckCircle, FiEdit2, FiMapPin } from "react-icons/fi";
 import { clearCart, selectCartItems, selectCartSubtotal } from "@/Store/Slices/cartSlice";
 import { openAuthModal } from "@/Store/Slices/uiSlice";
-import { couponApi, orderApi } from "@/Service/api";
+import { checkoutApi, couponApi, orderApi } from "@/Service/api";
 import Button from "@/Components/Button/Button";
 import Loader from "@/Components/Common/Loader/Loader";
+import MobileVerification from "@/Components/Checkout/MobileVerification";
+import FloatingLabelInput from "@/Components/Form/FloatingLabelInput";
 import { formatPrice } from "@/Utils/utils";
+import { loadRazorpayScript } from "@/Utils/loadRazorpayScript";
+
+const PINCODE_REGEX = /^[0-9]{6}$/;
+const DISABLED_FIELD_CLASS = "disabled:cursor-not-allowed disabled:opacity-50";
 
 const initialShipping = {
   shippingName: "",
   shippingPhone: "",
   shippingAddress: "",
-  shippingCity: "",
-  shippingState: "",
-  shippingPincode: "",
 };
 
 export default function CheckoutPage() {
   const dispatch = useDispatch();
   const router = useRouter();
-  const authUser = useSelector(selectAuthUser);
+  const { data: session, status } = useSession();
+  const authUser = session?.user;
   const items = useSelector(selectCartItems);
   const subtotal = useSelector(selectCartSubtotal);
 
@@ -34,14 +39,58 @@ export default function CheckoutPage() {
   const [couponSubtotalSnapshot, setCouponSubtotalSnapshot] = useState(null);
   const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [placingOrder, setPlacingOrder] = useState(false);
-  const [checkedAuth, setCheckedAuth] = useState(false);
+
+  // Step 1 of this page — nothing else is enterable until this passes.
+  const [pincode, setPincode] = useState("");
+  const [pincodeChecking, setPincodeChecking] = useState(false);
+  const [pincodeResult, setPincodeResult] = useState(null); // { serviceable, codAvailable } | null
+  const pincodeVerified = pincodeResult?.serviceable === true;
+
+  // Site/product-level COD policy (admin's site-wide toggle + any COD-disabled
+  // product in the cart) — independent of pincode, checked as soon as the
+  // cart is known. Final "can COD be offered" also needs courier-level COD
+  // support for the checked pincode (pincodeResult.codAvailable).
+  const [codPolicy, setCodPolicy] = useState(null); // { available, reason } | null
+  const [paymentMethod, setPaymentMethod] = useState("cod");
+
+  // Set once a prepaid order has actually been created in the DB (with a
+  // Razorpay order attached) — from that point on we never re-submit the
+  // form (that would create a duplicate order); the customer either
+  // completes payment or retries the same Razorpay order.
+  const [paymentInit, setPaymentInit] = useState(null); // { razorpayOrderId, razorpayKeyId, amount, orderNumber } | null
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
 
   useEffect(() => {
-    if (!authUser) {
+    if (status === "unauthenticated") {
       dispatch(openAuthModal({ view: "login", redirectTo: "/checkout" }));
     }
-    setCheckedAuth(true);
-  }, [authUser, dispatch]);
+  }, [status, dispatch]);
+
+  useEffect(() => {
+    if (items.length === 0) return;
+    checkoutApi
+      .checkCodAvailability(items.map((item) => ({ variantId: item.variantId, quantity: item.quantity })))
+      .then((res) => setCodPolicy(res.data.action ? res.data.data : { available: false, reason: null }))
+      .catch(() => setCodPolicy({ available: false, reason: null }));
+  }, [items]);
+
+  const courierCodAvailable = pincodeVerified && pincodeResult?.codAvailable === true;
+  const codOffered = pincodeVerified && courierCodAvailable && codPolicy?.available === true;
+  const codDisabledReason = !pincodeVerified
+    ? null
+    : codPolicy && !codPolicy.available
+      ? codPolicy.reason
+      : !courierCodAvailable
+        ? "Cash on Delivery isn't available via courier for this pincode"
+        : null;
+
+  // Never leave "Cash on Delivery" selected once it stops being offerable —
+  // e.g. the customer changes to a pincode without courier COD support.
+  useEffect(() => {
+    if (!codOffered && paymentMethod === "cod") {
+      setPaymentMethod("prepaid");
+    }
+  }, [codOffered, paymentMethod]);
 
   // If the cart subtotal changes after a coupon was applied (item added /
   // removed / quantity changed), the previously computed discount is stale —
@@ -53,15 +102,94 @@ export default function CheckoutPage() {
     }
   }, [subtotal, appliedCoupon, couponSubtotalSnapshot]);
 
-  if (!checkedAuth) return <Loader fullScreen />;
+  // Declared before any early return below (paymentInit's "Complete Your
+  // Payment" panel references openRazorpayModal in a click handler) — both
+  // just close over state setters/router/toast, no dependency on anything
+  // declared further down.
+  const handlePaymentSuccess = async (response) => {
+    setVerifyingPayment(true);
+    try {
+      const res = await checkoutApi.verifyPayment({
+        razorpay_order_id: response.razorpay_order_id,
+        razorpay_payment_id: response.razorpay_payment_id,
+        razorpay_signature: response.razorpay_signature,
+      });
+      if (res.data.action) {
+        toast.success("Payment successful! Order confirmed.");
+        router.push("/account");
+      } else {
+        toast.error(res.data.message || "Payment verification failed. Please contact support with your payment ID.");
+      }
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.message ||
+          "Payment verification failed. If money was deducted, please contact support with your payment ID.",
+      );
+    } finally {
+      setVerifyingPayment(false);
+    }
+  };
 
-  if (!authUser) {
+  // Razorpay's own hosted checkout widget — never a custom payment form.
+  // Safe to call again for a retry: reuses the same razorpayOrderId already
+  // created server-side, no new backend call.
+  const openRazorpayModal = async ({ razorpayOrderId, razorpayKeyId, amount, orderNumber }) => {
+    const loaded = await loadRazorpayScript();
+    if (!loaded || typeof window === "undefined" || !window.Razorpay) {
+      toast.error("Could not load the payment gateway. Please retry.");
+      return;
+    }
+
+    const rzp = new window.Razorpay({
+      key: razorpayKeyId,
+      amount,
+      currency: "INR",
+      order_id: razorpayOrderId,
+      name: "Sehat Potli",
+      description: `Order ${orderNumber}`,
+      prefill: { name: shipping.shippingName, contact: shipping.shippingPhone },
+      theme: { color: "#2E4A3B" },
+      handler: (response) => handlePaymentSuccess(response),
+      modal: {
+        ondismiss: () => toast("Payment was not completed. You can retry anytime."),
+      },
+    });
+
+    rzp.on("payment.failed", () => toast.error("Payment failed. Please retry."));
+    rzp.open();
+  };
+
+  if (status === "loading") return <Loader fullScreen />;
+
+  if (status === "unauthenticated") {
     return (
       <div className="mx-auto flex max-w-xl flex-col items-center gap-4 px-4 py-24 text-center">
         <h1 className="font-heading text-2xl text-(--primary)">Login Required</h1>
         <p className="text-(--secondary-text)">
           Please login to continue to checkout.
         </p>
+      </div>
+    );
+  }
+
+  // The order (and its Razorpay order) already exist server-side once this
+  // is set — the cart's been cleared too, so the empty-cart check below
+  // would otherwise take over. Stays here until payment is verified (which
+  // navigates away) instead of ever re-showing the form.
+  if (paymentInit) {
+    return (
+      <div className="mx-auto flex max-w-xl flex-col items-center gap-4 px-4 py-24 text-center">
+        <h1 className="font-heading text-2xl text-(--primary)">Complete Your Payment</h1>
+        <p className="text-(--secondary-text)">
+          Order <strong className="text-(--foreground)">{paymentInit.orderNumber}</strong> has been created and is
+          waiting for payment.
+        </p>
+        <Button onClick={() => openRazorpayModal(paymentInit)} disabled={verifyingPayment}>
+          {verifyingPayment ? "Verifying..." : "Retry Payment"}
+        </Button>
+        <Button variant="outline" url="/account">
+          I&apos;ll Pay Later
+        </Button>
       </div>
     );
   }
@@ -75,11 +203,50 @@ export default function CheckoutPage() {
     );
   }
 
+  if (!authUser?.mobileVerified) {
+    return (
+      <div className="mx-auto max-w-xl px-4 py-10">
+        <h1 className="font-heading text-3xl text-(--primary)">Checkout</h1>
+        <div className="mt-8">
+          <MobileVerification />
+        </div>
+      </div>
+    );
+  }
+
   const discountAmount = appliedCoupon?.discountAmount || 0;
   const total = Math.max(0, subtotal - discountAmount);
+  const canPlaceOrder =
+    pincodeVerified &&
+    shipping.shippingName.trim() &&
+    shipping.shippingPhone.trim() &&
+    shipping.shippingAddress.trim() &&
+    (paymentMethod !== "cod" || codOffered);
 
   const handleShippingChange = (field) => (event) => {
     setShipping((prev) => ({ ...prev, [field]: event.target.value }));
+  };
+
+  const handleCheckPincode = async (event) => {
+    event?.preventDefault?.();
+    if (!PINCODE_REGEX.test(pincode) || pincodeChecking) return;
+
+    setPincodeChecking(true);
+    setPincodeResult(null);
+    try {
+      const res = await checkoutApi.checkPincode(pincode);
+      setPincodeResult(res.data.action ? res.data.data : { serviceable: false, codAvailable: false });
+    } catch {
+      setPincodeResult({ serviceable: false, codAvailable: false });
+    } finally {
+      setPincodeChecking(false);
+    }
+  };
+
+  // Re-locks Step 2 — the pincode field re-opens for editing and has to be
+  // re-checked before name/phone/address become interactive again.
+  const handleChangePincode = () => {
+    setPincodeResult(null);
   };
 
   const handleApplyCoupon = async () => {
@@ -109,10 +276,17 @@ export default function CheckoutPage() {
 
   const handlePlaceOrder = async (event) => {
     event.preventDefault();
+    // Guards the same condition the submit button's `disabled` already
+    // reflects — belt-and-suspenders in case a stray Enter keypress ever
+    // reaches this handler before the button itself would allow it.
+    if (!canPlaceOrder || placingOrder) return;
+
     setPlacingOrder(true);
     try {
       const payload = {
         ...shipping,
+        shippingPincode: pincode,
+        paymentMethod,
         couponCode: appliedCoupon?.code || undefined,
         items: items.map((item) => ({
           productId: item.productId,
@@ -122,9 +296,17 @@ export default function CheckoutPage() {
       };
       const res = await orderApi.create(payload);
       if (res.data.action) {
-        toast.success("Order placed successfully!");
+        const orderData = res.data.data;
         dispatch(clearCart());
-        router.push("/account");
+
+        if (paymentMethod === "prepaid" && orderData.razorpay) {
+          const init = { ...orderData.razorpay, orderNumber: orderData.orderNumber };
+          setPaymentInit(init);
+          openRazorpayModal(init);
+        } else {
+          toast.success("Order placed successfully!");
+          router.push("/account");
+        }
       } else {
         toast.error(res.data.message || "Could not place order");
       }
@@ -143,64 +325,152 @@ export default function CheckoutPage() {
         <div className="flex flex-col gap-4 lg:col-span-2">
           <div className="rounded-2xl border border-(--border-color) bg-(--surface) p-6">
             <h2 className="font-heading text-xl text-(--primary)">Shipping Details</h2>
-            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <input
+
+            <div className="mt-4 rounded-xl border border-(--border-color) bg-(--surface-alt) p-4">
+              <p className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-(--foreground)">
+                <FiMapPin size={15} className="text-(--primary)" /> Step 1 &middot; Verify Delivery
+              </p>
+
+              {pincodeVerified ? (
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="flex items-center gap-1.5 text-sm text-(--success)">
+                    <FiCheckCircle size={15} /> Delivery available to {pincode}
+                    {pincodeResult.codAvailable ? " · COD available" : " · Prepaid only"}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleChangePincode}
+                    className="flex items-center gap-1 text-sm font-medium text-(--primary) underline"
+                  >
+                    <FiEdit2 size={13} /> Change
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <FloatingLabelInput
+                      id="checkout-pincode"
+                      label="Delivery Pincode"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={pincode}
+                      onChange={(e) => {
+                        setPincode(e.target.value.replace(/\D/g, ""));
+                        setPincodeResult(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleCheckPincode(e);
+                      }}
+                      wrapperClassName="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleCheckPincode}
+                      disabled={!PINCODE_REGEX.test(pincode) || pincodeChecking}
+                      className="sm:w-auto"
+                    >
+                      {pincodeChecking ? "Checking..." : "Check"}
+                    </Button>
+                  </div>
+                  {pincodeResult && !pincodeResult.serviceable && (
+                    <p className="flex items-center gap-1.5 text-sm text-(--danger)">
+                      <FiAlertCircle size={14} /> Sorry, we don&apos;t deliver to this pincode yet
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="my-5 border-t border-(--border-color)" />
+
+            <p className="mb-3 text-sm font-semibold text-(--foreground)">Step 2 &middot; Your Details</p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FloatingLabelInput
+                id="shipping-name"
                 required
-                placeholder="Full name"
+                label="Full name"
                 value={shipping.shippingName}
                 onChange={handleShippingChange("shippingName")}
-                className="rounded-lg border border-(--border-color) bg-(--background) px-4 py-2.5 text-sm outline-none focus:border-(--primary)"
+                disabled={!pincodeVerified}
+                className={DISABLED_FIELD_CLASS}
               />
-              <input
+              <FloatingLabelInput
+                id="shipping-phone"
                 required
                 type="tel"
-                placeholder="Phone number"
+                label="Phone number"
                 pattern="[0-9]{10}"
                 value={shipping.shippingPhone}
                 onChange={handleShippingChange("shippingPhone")}
-                className="rounded-lg border border-(--border-color) bg-(--background) px-4 py-2.5 text-sm outline-none focus:border-(--primary)"
+                disabled={!pincodeVerified}
+                className={DISABLED_FIELD_CLASS}
               />
-              <input
+              <FloatingLabelInput
+                id="shipping-address"
                 required
-                placeholder="Address"
+                label="Address"
                 value={shipping.shippingAddress}
                 onChange={handleShippingChange("shippingAddress")}
-                className="sm:col-span-2 rounded-lg border border-(--border-color) bg-(--background) px-4 py-2.5 text-sm outline-none focus:border-(--primary)"
+                disabled={!pincodeVerified}
+                className={DISABLED_FIELD_CLASS}
+                wrapperClassName="sm:col-span-2"
               />
-              <input
-                required
-                placeholder="City"
-                value={shipping.shippingCity}
-                onChange={handleShippingChange("shippingCity")}
-                className="rounded-lg border border-(--border-color) bg-(--background) px-4 py-2.5 text-sm outline-none focus:border-(--primary)"
-              />
-              <input
-                required
-                placeholder="State"
-                value={shipping.shippingState}
-                onChange={handleShippingChange("shippingState")}
-                className="rounded-lg border border-(--border-color) bg-(--background) px-4 py-2.5 text-sm outline-none focus:border-(--primary)"
-              />
-              <input
-                required
-                placeholder="Pincode"
-                pattern="[0-9]{6}"
-                value={shipping.shippingPincode}
-                onChange={handleShippingChange("shippingPincode")}
-                className="rounded-lg border border-(--border-color) bg-(--background) px-4 py-2.5 text-sm outline-none focus:border-(--primary)"
-              />
+            </div>
+
+            <p className="mb-3 mt-5 text-sm font-semibold text-(--foreground)">Payment Method</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label
+                className={`flex cursor-pointer flex-col gap-1 rounded-lg border p-3 transition-colors ${
+                  paymentMethod === "cod" ? "border-(--primary) bg-(--surface-alt)" : "border-(--border-color)"
+                } ${!pincodeVerified || !codOffered ? "cursor-not-allowed opacity-50" : ""}`}
+              >
+                <span className="flex items-center gap-2 text-sm font-medium text-(--foreground)">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="cod"
+                    checked={paymentMethod === "cod"}
+                    onChange={() => setPaymentMethod("cod")}
+                    disabled={!pincodeVerified || !codOffered}
+                    className="h-4 w-4"
+                  />
+                  Cash on Delivery
+                </span>
+                {pincodeVerified && codDisabledReason && (
+                  <span className="text-xs text-(--danger)">{codDisabledReason}</span>
+                )}
+              </label>
+
+              <label
+                className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 transition-colors ${
+                  paymentMethod === "prepaid" ? "border-(--primary) bg-(--surface-alt)" : "border-(--border-color)"
+                } ${!pincodeVerified ? "cursor-not-allowed opacity-50" : ""}`}
+              >
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="prepaid"
+                  checked={paymentMethod === "prepaid"}
+                  onChange={() => setPaymentMethod("prepaid")}
+                  disabled={!pincodeVerified}
+                  className="h-4 w-4"
+                />
+                <span className="text-sm font-medium text-(--foreground)">Pay Online</span>
+              </label>
             </div>
           </div>
 
           <div className="rounded-2xl border border-(--border-color) bg-(--surface) p-6">
             <h2 className="font-heading text-xl text-(--primary)">Have a Coupon?</h2>
             <div className="mt-4 flex gap-3">
-              <input
-                placeholder="Enter coupon code"
+              <FloatingLabelInput
+                id="coupon-code"
+                label="Enter coupon code"
                 value={couponCode}
                 onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                 disabled={Boolean(appliedCoupon)}
-                className="flex-1 rounded-lg border border-(--border-color) bg-(--background) px-4 py-2.5 text-sm uppercase outline-none focus:border-(--primary) disabled:opacity-60"
+                className="uppercase disabled:opacity-60"
+                wrapperClassName="flex-1"
               />
               {appliedCoupon ? (
                 <Button type="button" variant="outline" onClick={handleRemoveCoupon}>
@@ -247,7 +517,7 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          <Button type="submit" className="mt-6 w-full" disabled={placingOrder}>
+          <Button type="submit" className="mt-6 w-full" disabled={!canPlaceOrder || placingOrder}>
             {placingOrder ? "Placing Order..." : "Place Order"}
           </Button>
         </div>

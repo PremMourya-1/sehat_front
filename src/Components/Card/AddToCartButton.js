@@ -24,6 +24,27 @@ export default function AddToCartButton({
   const router = useRouter();
 
   const outOfStock = !variant || Number(variant.stock) <= 0;
+  const maxQty = variant && Number(variant.stock) > 0 ? Number(variant.stock) : undefined;
+
+  const clampQuantity = (value) => {
+    let next = Math.floor(value);
+    if (!Number.isFinite(next) || next < 1) next = 1;
+    if (maxQty && next > maxQty) next = maxQty;
+    return next;
+  };
+
+  const handleQuantityChange = (e) => {
+    const raw = e.target.value.replace(/\D/g, "").slice(0, 4);
+    if (raw === "") {
+      setQuantity("");
+      return;
+    }
+    setQuantity(clampQuantity(Number(raw)));
+  };
+
+  const handleQuantityBlur = () => {
+    if (quantity === "" || Number(quantity) < 1) setQuantity(1);
+  };
 
   const buildCartLine = () => ({
     productId: product.id,
@@ -34,7 +55,7 @@ export default function AddToCartButton({
     name: product.name,
     image: resolveImageUrl(product.image),
     stock: variant.stock,
-    quantity,
+    quantity: clampQuantity(Number(quantity) || 1),
   });
 
   const handleAddToCart = (event) => {
@@ -54,30 +75,42 @@ export default function AddToCartButton({
   };
 
   return (
-    <div className={`flex w-full min-w-0 items-center gap-3 max-md:gap-2 ${className}`}>
+    <div className={`flex w-full min-w-0 flex-col gap-3 md:flex-row md:items-center ${className}`}>
       {showQuantity && (
-        <div className="flex items-center rounded-full border border-(--border-color)">
+        <div className="flex w-full items-stretch overflow-hidden rounded-xl border border-(--border-color) bg-(--surface) md:w-auto md:flex-shrink-0">
           <button
             type="button"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              setQuantity((q) => Math.max(1, q - 1));
+              setQuantity((q) => clampQuantity(Number(q || 1) - 1));
             }}
-            className="p-2 text-(--secondary-text) hover:text-(--foreground)"
+            disabled={Number(quantity) <= 1}
+            className="flex items-center justify-center px-3.5 py-3 text-(--secondary-text) transition-colors hover:bg-(--surface-alt) hover:text-(--foreground) active:scale-90 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent md:px-2.5 md:py-2"
             aria-label="Decrease quantity"
           >
             <FiMinus size={14} />
           </button>
-          <span className="w-8 text-center text-sm font-medium">{quantity}</span>
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={quantity}
+            onChange={handleQuantityChange}
+            onBlur={handleQuantityBlur}
+            onClick={(e) => e.stopPropagation()}
+            aria-label="Quantity"
+            className="w-full min-w-0 flex-1 border-x border-(--border-color) bg-transparent text-center text-sm font-semibold text-(--foreground) focus:outline-none md:w-12 md:flex-none"
+          />
           <button
             type="button"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              setQuantity((q) => q + 1);
+              setQuantity((q) => clampQuantity(Number(q || 1) + 1));
             }}
-            className="p-2 text-(--secondary-text) hover:text-(--foreground)"
+            disabled={maxQty !== undefined && Number(quantity) >= maxQty}
+            className="flex items-center justify-center px-3.5 py-3 text-(--secondary-text) transition-colors hover:bg-(--surface-alt) hover:text-(--foreground) active:scale-90 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent md:px-2.5 md:py-2"
             aria-label="Increase quantity"
           >
             <FiPlus size={14} />
@@ -85,22 +118,24 @@ export default function AddToCartButton({
         </div>
       )}
 
-      <Button
-        variant="primary"
-        size="md"
-        icon={FiShoppingBag}
-        onClick={handleAddToCart}
-        disabled={outOfStock}
-        className="flex-1"
-      >
-        {outOfStock ? "Out of Stock" : "Add to Cart"}
-      </Button>
-
-      {showBuyNow && (
-        <Button variant="accent" size="md" onClick={handleBuyNow} disabled={outOfStock} className="flex-1">
-          Buy Now
+      <div className="flex w-full flex-1 gap-3 max-md:gap-2">
+        <Button
+          variant="primary"
+          size="md"
+          icon={FiShoppingBag}
+          onClick={handleAddToCart}
+          disabled={outOfStock}
+          className="flex-1"
+        >
+          {outOfStock ? "Out of Stock" : "Add to Cart"}
         </Button>
-      )}
+
+        {showBuyNow && (
+          <Button variant="accent" size="md" onClick={handleBuyNow} disabled={outOfStock} className="flex-1">
+            Buy Now
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

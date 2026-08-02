@@ -5,6 +5,7 @@ import Image from "next/image";
 import toast from "react-hot-toast";
 import { FiRepeat, FiSend } from "react-icons/fi";
 import { newsletterApi } from "@/Service/api";
+import FloatingLabelInput from "@/Components/Form/FloatingLabelInput";
 import subscribeImage from "@/assets/home/subscribe.png";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -56,13 +57,15 @@ export default function SubscribeAndSave() {
         </p>
 
         <form onSubmit={handleSubmit} className="mt-2 flex w-full max-w-sm flex-wrap justify-center gap-2 sm:flex-nowrap">
-          <input
+          <FloatingLabelInput
+            id="subscribe-email"
             type="email"
+            variant="dark"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter your email"
+            label="Enter your email"
             required
-            className="w-full min-w-0 flex-1 rounded-full border border-(--surface)/30 bg-(--surface)/10 px-4 py-2.5 text-sm text-(--surface) placeholder:text-(--surface)/60 focus:outline-none focus:ring-2 focus:ring-(--accent)"
+            wrapperClassName="w-full min-w-0 flex-1"
           />
           <button
             type="submit"

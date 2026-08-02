@@ -1,30 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { authApi } from "@/Service/api";
+import { useSession } from "next-auth/react";
 import Loader from "@/Components/Common/Loader/Loader";
 
 export default function AccountPage() {
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { data: session, status } = useSession();
 
-  useEffect(() => {
-    let cancelled = false;
-    authApi
-      .profile()
-      .then((res) => {
-        if (!cancelled && res.data.action) setProfile(res.data.data);
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  if (status === "loading") return <Loader />;
 
-  if (loading) return <Loader />;
+  const profile = session?.user;
 
   return (
     <div className="rounded-2xl border border-(--border-color) bg-(--surface) p-6">
@@ -49,7 +33,7 @@ export default function AccountPage() {
         <div>
           <p className="text-xs uppercase tracking-wide text-(--secondary-text)">Mobile</p>
           <p className="mt-1 font-medium text-(--foreground)">
-            {profile?.mobile || "--"}
+            {profile?.mobileVerified ? profile?.mobileNumber : "Not verified yet"}
           </p>
         </div>
       </div>

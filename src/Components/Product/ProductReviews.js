@@ -4,6 +4,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { FiCamera, FiCheckCircle, FiStar, FiX } from "react-icons/fi";
 import Button from "@/Components/Button/Button";
+import FloatingLabelInput from "@/Components/Form/FloatingLabelInput";
 import { reviewApi } from "@/Service/api";
 import { formatDate, resolveImageUrl } from "@/Utils/utils";
 
@@ -116,7 +117,7 @@ export default function ProductReviews({ productId, productName, reviews: initia
       ) : (
         <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
           {reviews.map((review) => (
-            <div key={review.id} className="rounded-xl border border-(--border-color) p-4">
+            <div key={review.id} className="rounded-xl border border-(--border-color) bg-(--surface-alt) p-4">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-sm font-semibold text-(--foreground)">{review.customerName}</p>
                 <Stars rating={review.rating} />
@@ -137,7 +138,7 @@ export default function ProductReviews({ productId, productName, reviews: initia
       )}
 
       {formOpen && (
-        <div className="mt-6 rounded-xl border border-(--border-color) p-4 md:p-5">
+        <div className="mt-6 rounded-xl border border-(--border-color) bg-(--surface-alt) p-4 md:p-5">
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-medium text-(--foreground)">
               Write a review for {productName}
@@ -159,15 +160,16 @@ export default function ProductReviews({ productId, productName, reviews: initia
                 verify your purchase before reviewing.
               </p>
               <div className="flex flex-wrap gap-2">
-                <input
+                <FloatingLabelInput
+                  id="review-order-number"
                   type="text"
                   value={orderNumber}
                   onChange={(e) => {
                     setOrderNumber(e.target.value);
                     setVerifyError("");
                   }}
-                  placeholder="Enter your order number"
-                  className="min-w-0 flex-1 rounded-lg border border-(--border-color) bg-(--surface) px-3 py-2 text-sm text-(--foreground) focus:outline-none focus:ring-1 focus:ring-(--primary)"
+                  label="Enter your order number"
+                  wrapperClassName="min-w-0 flex-1"
                 />
                 <Button type="submit" size="sm" disabled={verifying || !orderNumber.trim()}>
                   {verifying ? "Verifying..." : "Verify Order"}
@@ -181,13 +183,13 @@ export default function ProductReviews({ productId, productName, reviews: initia
                 <FiCheckCircle size={14} /> Order verified — you can post your review
               </p>
 
-              <input
+              <FloatingLabelInput
+                id="review-name"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
+                label="Your name"
                 required
-                className="rounded-lg border border-(--border-color) bg-(--surface) px-3 py-2 text-sm text-(--foreground) focus:outline-none focus:ring-1 focus:ring-(--primary)"
               />
 
               <div className="flex items-center gap-1">
@@ -204,13 +206,14 @@ export default function ProductReviews({ productId, productName, reviews: initia
                 ))}
               </div>
 
-              <textarea
+              <FloatingLabelInput
+                as="textarea"
+                id="review-comment"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                placeholder="Share your experience..."
+                label="Share your experience..."
                 rows={3}
                 required
-                className="rounded-lg border border-(--border-color) bg-(--surface) p-2.5 text-sm text-(--foreground) focus:outline-none focus:ring-1 focus:ring-(--primary)"
               />
 
               <div className="flex items-center gap-3">

@@ -1,32 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { loginAction, selectAuthUser } from "@/Store/Slices/authSlice";
+import { useSession } from "next-auth/react";
+import { useDispatch } from "react-redux";
 import { openAuthModal } from "@/Store/Slices/uiSlice";
-import { USER_DETAILS } from "@/Constant/Constant";
-import { getLocalStorageItem } from "@/Utils/localStorage";
 import AccountSidebar from "@/Components/Account/AccountSidebar";
 import Button from "@/Components/Button/Button";
 import Loader from "@/Components/Common/Loader/Loader";
 
 export default function AccountLayout({ children }) {
   const dispatch = useDispatch();
-  const authUser = useSelector(selectAuthUser);
-  const [checked, setChecked] = useState(false);
+  const { status } = useSession();
 
-  useEffect(() => {
-    if (!authUser) {
-      const stored = getLocalStorageItem(USER_DETAILS);
-      if (stored) dispatch(loginAction(stored));
-    }
-    setChecked(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  if (status === "loading") return <Loader fullScreen />;
 
-  if (!checked) return <Loader fullScreen />;
-
-  if (!authUser) {
+  if (status === "unauthenticated") {
     return (
       <div className="mx-auto flex max-w-xl flex-col items-center gap-4 px-4 py-24 text-center">
         <h1 className="font-heading text-2xl text-(--primary)">

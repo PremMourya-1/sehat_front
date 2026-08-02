@@ -29,7 +29,13 @@ const WHY_CHOOSE_ITEMS = [
 export default function WhyChooseUs() {
   return (
     <section className="relative overflow-hidden bg-(--background) py-14">
-      <Image src={whyChooseImage} alt="" fill sizes="100vw" className="object-cover" />
+      <Image
+        src={whyChooseImage}
+        alt=""
+        fill
+        sizes="100vw"
+        className="object-cover max-md:object-top-left"
+      />
 
       <div className="relative mx-auto max-w-7xl px-4 md:px-8">
         <h2 className="text-center font-heading text-3xl text-(--primary) max-md:text-2xl">

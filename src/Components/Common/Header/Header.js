@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import { useDispatch, useSelector } from "react-redux";
 import toast from "react-hot-toast";
 import {
@@ -15,39 +17,20 @@ import {
 } from "react-icons/fi";
 import headerNavData from "@/Data/headerNavData";
 import { selectCartCount } from "@/Store/Slices/cartSlice";
-import {
-  loginAction,
-  logoutAction,
-  selectAuthUser,
-} from "@/Store/Slices/authSlice";
 import { openAuthModal } from "@/Store/Slices/uiSlice";
-import { USER_DETAILS, BRAND_NAME } from "@/Constant/Constant";
-import {
-  getLocalStorageItem,
-  removeLocalStorageItem,
-} from "@/Utils/localStorage";
-import { authApi } from "@/Service/api";
+import { BRAND_NAME } from "@/Constant/Constant";
+import logo from "@/assets/logo.png";
 
 export default function Header() {
   const dispatch = useDispatch();
-  const router = useRouter();
   const pathname = usePathname();
   const cartCount = useSelector(selectCartCount);
-  const authUser = useSelector(selectAuthUser);
+  const { data: session, status } = useSession();
+  const authUser = session?.user;
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef(null);
-
-  // Session rehydration — on first mount, if the user was previously logged
-  // in (localStorage has details) but Redux state is empty (fresh page
-  // load), restore it into the store.
-  useEffect(() => {
-    if (authUser) return;
-    const stored = getLocalStorageItem(USER_DETAILS);
-    if (stored) dispatch(loginAction(stored));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -64,17 +47,9 @@ export default function Header() {
   }, [pathname]);
 
   const handleLogout = async () => {
-    try {
-      await authApi.logout();
-    } catch {
-      // ignore network errors on logout — clear client state regardless
-    } finally {
-      removeLocalStorageItem(USER_DETAILS);
-      dispatch(logoutAction());
-      setProfileOpen(false);
-      toast.success("Logged out successfully");
-      router.push("/");
-    }
+    setProfileOpen(false);
+    await signOut({ redirect: false });
+    toast.success("Logged out successfully");
   };
 
   const handleAuthOpen = () => {
@@ -83,14 +58,14 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-(--border-color) bg-(--surface)/90 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-8 py-3 max-md:px-4">
-        <Link href="/" className="flex flex-col leading-none">
-          <span className="font-heading text-3xl font-semibold text-(--primary) max-md:text-2xl">
-            {BRAND_NAME}
-          </span>
-          <span className="font-accent text-xs tracking-wide text-(--accent-secondary) max-md:text-[11px]">
-            Pure. Natural. Wholesome.
-          </span>
+      <div className="relative mx-auto flex max-w-7xl items-center justify-between px-8 py-3 max-md:px-4">
+        <Link href="/" className="flex items-center leading-none">
+          <Image
+            src={logo}
+            alt={BRAND_NAME}
+            className="w-[100px] h-auto object-contain  max-md:w-[80px]"
+            priority
+          />
         </Link>
 
         <nav className="flex items-center gap-8 max-md:hidden">
@@ -126,7 +101,7 @@ export default function Header() {
             )}
           </Link>
 
-          {authUser ? (
+          {status === "authenticated" && authUser ? (
             <div className="relative block max-md:hidden" ref={profileRef}>
               <button
                 type="button"
@@ -187,7 +162,7 @@ export default function Header() {
       </div>
 
       {mobileOpen && (
-        <div className="hidden border-t border-(--border-color) bg-(--surface) px-4 py-4 max-md:block">
+        <div className="absolute inset-x-0 top-full z-50 hidden border-t border-(--border-color) bg-(--surface) px-4 py-4 shadow-lg max-md:block">
           <nav className="flex flex-col gap-3">
             {headerNavData.map((link) => (
               <Link
@@ -198,7 +173,7 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
-            {authUser ? (
+            {status === "authenticated" && authUser ? (
               <>
                 <Link
                   href="/account"

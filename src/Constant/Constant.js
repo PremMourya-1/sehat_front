@@ -1,6 +1,5 @@
 // Centralized constants used across the storefront.
 
-export const USER_DETAILS = "SEHAT_POTLI_USER_DETAILS";
 export const CART_STORAGE_KEY = "SEHAT_POTLI_CART";
 
 export const BRAND_NAME = "Sehat Potli";
@@ -55,5 +54,4 @@ export const ORDER_STATUS_LABELS = {
 export const AUTH_VIEWS = {
   LOGIN: "login",
   REGISTER: "register",
-  OTP: "otp",
 };

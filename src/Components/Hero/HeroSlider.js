@@ -31,8 +31,7 @@ function renderHighlightedTitle(title) {
   const highlighted = words.slice(words.length - highlightCount).join(" ");
   return (
     <>
-      {plain}{" "}
-      <span className="text-(--accent)">{highlighted}</span>
+      {plain} <span className="text-(--accent)">{highlighted}</span>
     </>
   );
 }
@@ -57,7 +56,11 @@ export default function HeroSlider({ banners = [] }) {
 
   const handlePointerDown = (e) => {
     if (!hasBanners || banners.length < 2) return;
-    dragState.current = { startX: e.clientX, deltaX: 0, pointerId: e.pointerId };
+    dragState.current = {
+      startX: e.clientX,
+      deltaX: 0,
+      pointerId: e.pointerId,
+    };
     e.currentTarget.setPointerCapture(e.pointerId);
     setIsDragging(true);
   };
@@ -85,7 +88,7 @@ export default function HeroSlider({ banners = [] }) {
 
   if (!hasBanners) {
     return (
-      <section className="relative flex min-h-[85vh] items-center justify-center overflow-hidden bg-(--surface-alt) px-4 text-center">
+      <section className="relative flex min-h-[85vh] max-md:min-h-0 items-center justify-center overflow-hidden bg-(--surface-alt) px-4 text-center max-md:py-10">
         <div className="animate-fade-in-up relative z-10 mx-auto max-w-2xl">
           <p className="font-accent text-lg text-(--accent-secondary) md:text-2xl">
             {BRAND_TAGLINE}
@@ -94,12 +97,16 @@ export default function HeroSlider({ banners = [] }) {
             {BRAND_NAME}
           </h1>
           <p className="mt-4 text-(--secondary-text) md:text-lg">
-            Premium, hand-picked dry fruits and nuts — sourced with care,
-            packed fresh, delivered to your doorstep.
+            Premium, hand-picked dry fruits and nuts — sourced with care, packed
+            fresh, delivered to your doorstep.
           </p>
           <div className="mt-8 flex justify-center gap-4">
-            <Button url="/products" size="lg">Shop Now</Button>
-            <Button url="/about" variant="outline" size="lg">Our Story</Button>
+            <Button url="/products" size="lg">
+              Shop Now
+            </Button>
+            <Button url="/about" variant="outline" size="lg">
+              Our Story
+            </Button>
           </div>
         </div>
       </section>
@@ -110,7 +117,7 @@ export default function HeroSlider({ banners = [] }) {
 
   return (
     <section
-      className={`relative min-h-[85vh] touch-pan-y overflow-hidden select-none ${
+      className={`relative min-h-[85vh] max-md:min-h-0 touch-pan-y overflow-hidden select-none ${
         isDragging ? "cursor-grabbing" : "cursor-grab"
       }`}
       onPointerDown={handlePointerDown}
@@ -142,7 +149,7 @@ export default function HeroSlider({ banners = [] }) {
         </div>
       ))}
 
-      <div className="relative z-10 flex min-h-[85vh] flex-col justify-center px-6 text-white md:px-16">
+      <div className="relative z-10 flex min-h-[85vh] max-md:min-h-0 flex-col justify-center px-6 text-white max-md:py-7 md:px-16">
         <div key={banner.id} className="animate-fade-in-up max-w-2xl">
           <p className="font-accent text-lg text-(--accent) drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] md:text-2xl">
             {BRAND_TAGLINE}
@@ -153,13 +160,15 @@ export default function HeroSlider({ banners = [] }) {
             </h1>
           )}
           {banner.description && (
-            <p className="mt-4 max-w-xl text-white/85 drop-shadow-[0_1px_4px_rgba(0,0,0,0.6)] md:text-lg">
+            <p className="mt-4 max-w-xl text-white/85 drop-shadow-[0_1px_4px_rgba(0,0,0,0.6)] max-md:line-clamp-2 md:text-lg">
               {banner.description}
             </p>
           )}
 
           <div className="mt-8 flex flex-wrap gap-4">
-            <Button url="/products" size="lg">Shop Now</Button>
+            <Button url="/products" size="lg">
+              Shop Now
+            </Button>
             <Button url="/products" variant="outline-light" size="lg">
               Build Your Box
             </Button>
@@ -167,7 +176,10 @@ export default function HeroSlider({ banners = [] }) {
 
           <div className="mt-8 flex flex-wrap gap-x-8 gap-y-3 drop-shadow-[0_1px_4px_rgba(0,0,0,0.7)]">
             {FEATURE_BADGES.map(({ icon: Icon, label }) => (
-              <div key={label} className="flex items-center gap-2 text-sm text-white/90">
+              <div
+                key={label}
+                className="flex items-center gap-2 text-sm text-white/90"
+              >
                 <Icon className="text-(--accent)" />
                 {label}
               </div>

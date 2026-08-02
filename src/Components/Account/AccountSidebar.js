@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FiClock, FiLock, FiPackage, FiUser } from "react-icons/fi";
+import { FiClock, FiPackage, FiUser } from "react-icons/fi";
 
 const links = [
   { label: "My Account", href: "/account", icon: FiUser },
   { label: "My Orders", href: "/account/orders", icon: FiPackage },
   { label: "Recent Orders", href: "/account/recent-orders", icon: FiClock },
-  { label: "Change Password", href: "/account/change-password", icon: FiLock },
 ];
 
 export default function AccountSidebar() {

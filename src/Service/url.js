@@ -1,14 +1,18 @@
 // Flat objects of endpoint path segments, grouped by resource. These map
 // 1:1 onto the public routes exposed by sehat-potli-backend.
 
+export const mobileUrl = {
+  sendOtp: "/customer/mobile/send-otp",
+  verifyOtp: "/customer/mobile/verify-otp",
+};
+
+// Registration (name/email/password + email OTP). Sign-in itself goes
+// through NextAuth's "credentials" provider — see next-auth/react's
+// signIn()/signOut(), not these.
 export const authUrl = {
   register: "/auth/register",
-  verifyOtp: "/auth/verify-otp",
-  resendOtp: "/auth/resend-otp",
-  login: "/auth/login",
-  logout: "/auth/logout",
-  profile: "/auth/profile",
-  changePassword: "/auth/change-password",
+  verifyOtp: "/auth/register/verify-otp",
+  resendOtp: "/auth/register/resend-otp",
 };
 
 export const productUrl = {
@@ -37,6 +41,12 @@ export const orderUrl = {
   list: "/orders",
   recent: "/orders/recent",
   byId: (id) => `/orders/${id}`,
+};
+
+export const checkoutUrl = {
+  checkPincode: "/checkout/check-pincode",
+  codAvailability: "/checkout/cod-availability",
+  verifyPayment: "/checkout/verify-payment",
 };
 
 export const couponUrl = {

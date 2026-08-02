@@ -1,6 +1,5 @@
 import axios from "axios";
-import { USER_DETAILS } from "@/Constant/Constant";
-import { removeLocalStorageItem } from "@/Utils/localStorage";
+import { getCurrentApiToken } from "@/Service/sessionBridge";
 
 export const BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000/api";
@@ -18,18 +17,21 @@ const createApiForClient = (contentType) => {
   });
 
   api.interceptors.request.use(
-    (config) => config,
+    (config) => {
+      const apiToken = getCurrentApiToken();
+      if (apiToken) {
+        config.headers.Authorization = `Bearer ${apiToken}`;
+      }
+      return config;
+    },
     (error) => Promise.reject(error),
   );
 
   api.interceptors.response.use(
     (response) => response,
     (error) => {
-      if (error?.response?.status === 401) {
-        removeLocalStorageItem(USER_DETAILS);
-        if (typeof window !== "undefined") {
-          window.location.replace("/");
-        }
+      if (error?.response?.status === 401 && typeof window !== "undefined") {
+        window.location.replace("/");
       }
       return Promise.reject(error);
     },

@@ -49,9 +49,9 @@ export default async function HomePage() {
       <TrendingProducts products={trendingProducts} />
       <ComboOffers offers={comboOffers} />
       <GiftHampersSection products={giftHamperProducts} />
+      <SubscribeAndSave />
       <WhyChooseUs />
       {/* <TestimonialsSection testimonials={testimonials} /> */}
-      <SubscribeAndSave />
     </div>
   );
 }

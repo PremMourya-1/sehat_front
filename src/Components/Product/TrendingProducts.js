@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FiArrowRight } from "react-icons/fi";
+import Button from "@/Components/Button/Button";
 import ProductCard from "@/Components/Card/ProductCard";
 
 // "New Arrivals / Trending Now" — same layout as the Best Sellers row.
@@ -20,7 +21,7 @@ export default function TrendingProducts({ products = [] }) {
         </div>
         <Link
           href="/products"
-          className="flex items-center gap-1 text-sm font-medium text-(--primary) underline"
+          className="flex items-center gap-1 text-sm font-medium text-(--primary) underline max-md:hidden"
         >
           View all <FiArrowRight size={14} />
         </Link>
@@ -30,6 +31,12 @@ export default function TrendingProducts({ products = [] }) {
         {products.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}
+      </div>
+
+      <div className="mt-6 hidden max-md:flex max-md:justify-center">
+        <Button url="/products" variant="outline" size="sm">
+          View all
+        </Button>
       </div>
     </section>
   );
