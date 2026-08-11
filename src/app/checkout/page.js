@@ -43,7 +43,7 @@ export default function CheckoutPage() {
   // Step 1 of this page — nothing else is enterable until this passes.
   const [pincode, setPincode] = useState("");
   const [pincodeChecking, setPincodeChecking] = useState(false);
-  const [pincodeResult, setPincodeResult] = useState(null); // { serviceable, codAvailable } | null
+  const [pincodeResult, setPincodeResult] = useState(null); // { serviceable, codAvailable, shippingCharge } | null
   const pincodeVerified = pincodeResult?.serviceable === true;
 
   // Site/product-level COD policy (admin's site-wide toggle + any COD-disabled
@@ -215,7 +215,12 @@ export default function CheckoutPage() {
   }
 
   const discountAmount = appliedCoupon?.discountAmount || 0;
-  const total = Math.max(0, subtotal - discountAmount);
+  // Only meaningful once Step 1 passes — shippingCharge comes back from
+  // checkoutApi.checkPincode() (see utils/shippingZones.js getShippingCharge
+  // server-side). The order's actual total is recomputed authoritatively at
+  // creation time from the same helper — this is a preview, not the charge.
+  const shippingCharge = pincodeVerified ? pincodeResult?.shippingCharge || 0 : 0;
+  const total = Math.max(0, subtotal - discountAmount + shippingCharge);
   const canPlaceOrder =
     pincodeVerified &&
     shipping.shippingName.trim() &&
@@ -235,9 +240,9 @@ export default function CheckoutPage() {
     setPincodeResult(null);
     try {
       const res = await checkoutApi.checkPincode(pincode);
-      setPincodeResult(res.data.action ? res.data.data : { serviceable: false, codAvailable: false });
+      setPincodeResult(res.data.action ? res.data.data : { serviceable: false, codAvailable: false, shippingCharge: 0 });
     } catch {
-      setPincodeResult({ serviceable: false, codAvailable: false });
+      setPincodeResult({ serviceable: false, codAvailable: false, shippingCharge: 0 });
     } finally {
       setPincodeChecking(false);
     }
@@ -511,6 +516,12 @@ export default function CheckoutPage() {
                 <span>-{formatPrice(discountAmount)}</span>
               </div>
             )}
+            <div className="flex justify-between text-(--secondary-text)">
+              <span>Shipping</span>
+              <span className="text-(--foreground)">
+                {pincodeVerified ? formatPrice(shippingCharge) : "Calculated after Step 1"}
+              </span>
+            </div>
             <div className="flex justify-between text-base font-semibold text-(--foreground)">
               <span>Total</span>
               <span>{formatPrice(total)}</span>

@@ -51,6 +51,21 @@ export const ORDER_STATUS_LABELS = {
   cancelled: "Cancelled",
 };
 
+// Customer-facing status (Order.customerStatus) — separate from the
+// internal/admin status above. confirmed/dispatched are set by order
+// creation/label generation; picked_up/in_transit/out_for_delivery/
+// delivered/rto are driven by Shiprocket's status webhook (see backend
+// utils/shiprocket.js handleShiprocketStatusWebhook).
+export const CUSTOMER_STATUS_LABELS = {
+  confirmed: "Order Confirmed",
+  dispatched: "Dispatched",
+  picked_up: "Picked Up",
+  in_transit: "In Transit",
+  out_for_delivery: "Out for Delivery",
+  delivered: "Delivered",
+  rto: "Returned to Origin",
+};
+
 export const AUTH_VIEWS = {
   LOGIN: "login",
   REGISTER: "register",

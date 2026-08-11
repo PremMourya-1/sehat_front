@@ -1,12 +1,17 @@
-import { ORDER_STATUS_LABELS } from "@/Constant/Constant";
+import { CUSTOMER_STATUS_LABELS } from "@/Constant/Constant";
 import { formatDate, formatPrice } from "@/Utils/utils";
 
+// Keyed by Order.customerStatus (see models/Order.js) — deliberately
+// separate from the admin's internal operational status, which customers
+// never see.
 const STATUS_STYLES = {
-  pending: "bg-(--warning)/15 text-(--warning)",
-  processing: "bg-(--info)/15 text-(--info)",
-  shipped: "bg-(--primary)/15 text-(--primary)",
+  confirmed: "bg-(--info)/15 text-(--info)",
+  dispatched: "bg-(--primary)/15 text-(--primary)",
+  picked_up: "bg-(--primary)/15 text-(--primary)",
+  in_transit: "bg-(--primary)/15 text-(--primary)",
+  out_for_delivery: "bg-(--primary)/15 text-(--primary)",
   delivered: "bg-(--success)/15 text-(--success)",
-  cancelled: "bg-(--danger)/15 text-(--danger)",
+  rto: "bg-(--danger)/15 text-(--danger)",
 };
 
 export default function OrderCard({ order }) {
@@ -26,11 +31,11 @@ export default function OrderCard({ order }) {
           </p>
         </div>
         <span
-          className={`rounded-full px-3 py-1 text-xs font-medium capitalize ${
-            STATUS_STYLES[order.status] || "bg-(--surface-alt) text-(--secondary-text)"
+          className={`rounded-full px-3 py-1 text-xs font-medium ${
+            STATUS_STYLES[order.customerStatus] || "bg-(--surface-alt) text-(--secondary-text)"
           }`}
         >
-          {ORDER_STATUS_LABELS[order.status] || order.status}
+          {CUSTOMER_STATUS_LABELS[order.customerStatus] || order.customerStatus}
         </span>
       </div>
 
