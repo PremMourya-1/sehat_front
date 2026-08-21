@@ -2,6 +2,7 @@ import Link from "next/link";
 import { FiArrowRight } from "react-icons/fi";
 import Button from "@/Components/Button/Button";
 import ProductCard from "@/Components/Card/ProductCard";
+import SectionHeading from "@/Components/Common/SectionHeading";
 
 // "New Arrivals / Trending Now" — same layout as the Best Sellers row.
 // Products are real, admin-flagged via Product.isTrending.
@@ -11,14 +12,11 @@ export default function TrendingProducts({ products = [] }) {
   return (
     <section className="mx-auto max-w-7xl px-4 py-12 md:px-8">
       <div className="flex items-end justify-between">
-        <div>
-          <h2 className="font-heading text-3xl text-(--primary) max-md:text-2xl">
-            New Arrivals &amp; Trending Now
-          </h2>
-          <p className="mt-2 font-accent text-(--accent-secondary)">
-            Fresh in, and flying off the shelves
-          </p>
-        </div>
+        <SectionHeading
+          title="New Arrivals & Trending Now"
+          subtitle="Fresh in, and flying off the shelves"
+          align="left"
+        />
         <Link
           href="/products"
           className="flex items-center gap-1 text-sm font-medium text-(--primary) underline max-md:hidden"

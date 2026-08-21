@@ -18,14 +18,15 @@ export default function ProductGallery({ product }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-(--surface-alt)">
+      <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-(--border-color) bg-(--surface-alt)">
         <Image
+          key={active}
           src={resolveImageUrl(images[active])}
           alt={product?.name || "Product image"}
           fill
           priority
           sizes="(max-width: 768px) 100vw, 50vw"
-          className="object-cover"
+          className="animate-fade-in object-cover [animation-duration:300ms]"
         />
       </div>
 
@@ -36,8 +37,11 @@ export default function ProductGallery({ product }) {
               key={image + index}
               type="button"
               onClick={() => setActive(index)}
-              className={`relative h-16 w-16 overflow-hidden rounded-xl border-2 ${
-                index === active ? "border-(--primary)" : "border-transparent"
+              aria-label={`View image ${index + 1}`}
+              className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 transition-colors ${
+                index === active
+                  ? "border-(--primary)"
+                  : "border-transparent opacity-80 hover:opacity-100"
               }`}
             >
               <Image

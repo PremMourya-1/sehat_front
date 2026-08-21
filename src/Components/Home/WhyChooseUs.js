@@ -1,6 +1,5 @@
-import Image from "next/image";
 import { FiAward, FiFeather, FiSlash, FiTruck } from "react-icons/fi";
-import whyChooseImage from "@/assets/home/whyChoose2.png";
+import SectionHeading from "@/Components/Common/SectionHeading";
 
 const WHY_CHOOSE_ITEMS = [
   {
@@ -25,39 +24,28 @@ const WHY_CHOOSE_ITEMS = [
   },
 ];
 
-// Permanent, hardcoded trust section — not admin-managed. Sits above FAQs.
+// Permanent, hardcoded trust section — not admin-managed. A solid dark
+// forest-green band (rather than a photo background) so it reads as a
+// deliberate, brand-forward "trust bar" and breaks up the page's cream
+// rhythm, instead of reusing the same background photo as ShopByType/
+// BuildYourMixBanner above it.
 export default function WhyChooseUs() {
   return (
-    <section className="relative overflow-hidden bg-(--background) py-14">
-      <Image
-        src={whyChooseImage}
-        alt=""
-        fill
-        sizes="100vw"
-        className="object-cover max-md:object-top-left"
-      />
-
-      <div className="relative mx-auto max-w-7xl px-4 md:px-8">
-        <h2 className="text-center font-heading text-3xl text-(--primary) max-md:text-2xl">
-          Why Choose Sehat Potli?
-        </h2>
-        <div className="mt-3 flex items-center justify-center gap-3">
-          <span className="h-px w-12 bg-(--border-color)" />
-          <FiFeather className="text-(--primary)" size={14} />
-          <span className="h-px w-12 bg-(--border-color)" />
-        </div>
+    <section className="bg-(--btn-primary) py-14">
+      <div className="mx-auto max-w-7xl px-4 md:px-8">
+        <SectionHeading title="Why Choose Sehat Potli?" tone="light" />
 
         <div className="mt-10 grid grid-cols-2 gap-3 max-[400px]:gap-2 sm:gap-4 md:grid-cols-4 md:gap-6">
           {WHY_CHOOSE_ITEMS.map(({ icon: Icon, title, description }) => (
             <div
               key={title}
-              className="flex flex-col items-center gap-3 rounded-2xl border border-(--border-color) bg-(--surface)/60 p-6 text-center backdrop-blur-sm"
+              className="flex flex-col items-center gap-3 rounded-2xl border border-(--surface)/15 bg-(--surface)/5 p-6 text-center backdrop-blur-sm"
             >
-              <span className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-(--primary)/30 text-(--primary)">
+              <span className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-(--accent)/50 text-(--accent)">
                 <Icon size={26} />
               </span>
-              <h3 className="font-heading text-base text-(--foreground)">{title}</h3>
-              <p className="text-xs text-(--secondary-text)">{description}</p>
+              <h3 className="font-heading text-base text-(--surface)">{title}</h3>
+              <p className="text-xs text-(--surface)/70">{description}</p>
             </div>
           ))}
         </div>

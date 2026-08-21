@@ -1,5 +1,6 @@
 import { FiStar } from "react-icons/fi";
 import Image from "next/image";
+import SectionHeading from "@/Components/Common/SectionHeading";
 import { resolveImageUrl } from "@/Utils/utils";
 
 export default function TestimonialsSection({ testimonials = [] }) {
@@ -8,12 +9,10 @@ export default function TestimonialsSection({ testimonials = [] }) {
   return (
     <section className="bg-(--surface-alt) py-14">
       <div className="mx-auto max-w-7xl px-4 md:px-8">
-        <h2 className="text-center font-heading text-3xl text-(--primary) max-md:text-2xl">
-          What Our Customers Say
-        </h2>
-        <p className="mx-auto mt-2 max-w-xl text-center font-accent text-(--accent-secondary)">
-          Real stories from healthier, happier homes
-        </p>
+        <SectionHeading
+          title="What Our Customers Say"
+          subtitle="Real stories from healthier, happier homes"
+        />
 
         <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
           {testimonials.map((testimonial) => (

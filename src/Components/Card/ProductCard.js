@@ -91,7 +91,7 @@ export default function ProductCard({ product }) {
             onClick={() => setWishlisted((v) => !v)}
             aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
             aria-pressed={wishlisted}
-            className={`absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-(--surface)/90 shadow-sm transition-colors ${
+            className={`absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full bg-(--surface)/90 shadow-sm transition-colors ${
               wishlisted
                 ? "text-(--danger)"
                 : "text-(--foreground) hover:text-(--danger)"
@@ -100,10 +100,14 @@ export default function ProductCard({ product }) {
             <FiHeart size={15} fill={wishlisted ? "currentColor" : "none"} />
           </button>
 
+          {/* Desktop-only: hover never fires on touch, so a hover-revealed
+              button would be unreachable on mobile — tapping the image
+              (which already opens the full product page) is the mobile
+              equivalent, so this is hidden there rather than pinned open. */}
           <button
             type="button"
             onClick={() => setQuickViewOpen(true)}
-            className="absolute inset-x-2 bottom-2 flex translate-y-2 items-center justify-center gap-1.5 rounded-full bg-(--foreground)/85 py-2 text-xs font-medium text-(--surface) opacity-0 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100"
+            className="absolute inset-x-2 bottom-2 flex items-center justify-center gap-1.5 rounded-full bg-(--foreground)/85 py-2 text-xs font-medium text-(--surface) opacity-100 transition-all duration-200 max-md:hidden md:translate-y-2 md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100"
           >
             <FiEye size={14} /> Quick View
           </button>
@@ -116,12 +120,7 @@ export default function ProductCard({ product }) {
             </h3>
           </Link>
 
-          <div className="max-md:hidden">
-            <StarRating
-              rating={product.rating}
-              reviewCount={product.reviewCount}
-            />
-          </div>
+          <StarRating rating={product.rating} reviewCount={product.reviewCount} />
 
           {trustBadges.length > 0 && (
             <div className="flex flex-wrap gap-2 max-md:hidden">

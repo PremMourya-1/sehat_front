@@ -1,5 +1,9 @@
 // Small, framework-agnostic helper functions shared across components.
 
+// Joins truthy class name fragments together (like classnames/clsx) —
+// used by shared presentational components (Card, skeletons, ...).
+export const cx = (...classes) => classes.filter(Boolean).join(" ");
+
 export const formatPrice = (value) => {
   const num = Number(value) || 0;
   return `₹${num.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;

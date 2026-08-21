@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
-import whyChooseImage from "@/assets/home/whyChoose2.png";
+import SectionHeading from "@/Components/Common/SectionHeading";
 import { resolveImageUrl } from "@/Utils/utils";
 
 const AUTO_SCROLL_SPEED = 0.8; // px per animation frame (~48px/s)
@@ -89,22 +89,12 @@ export default function ShopByType({ categories = [] }) {
   if (!hasCategories) return null;
 
   return (
-    <section className="relative overflow-hidden bg-(--background) py-14">
-      <Image
-        src={whyChooseImage}
-        alt=""
-        fill
-        sizes="100vw"
-        className="object-cover max-md:object-top-left"
-      />
-
+    <section className="relative overflow-hidden bg-(--surface-alt) py-14">
       <div className="relative mx-auto max-w-7xl px-4 md:px-8">
-        <h2 className="text-center font-heading text-3xl text-(--primary) max-md:text-2xl">
-          Shop by Categories
-        </h2>
-        <p className="mx-auto mt-2 max-w-xl text-center font-accent text-(--accent-secondary)">
-          Find exactly what you're looking for
-        </p>
+        <SectionHeading
+          title="Shop by Categories"
+          subtitle="Find exactly what you're looking for"
+        />
       </div>
 
       <div

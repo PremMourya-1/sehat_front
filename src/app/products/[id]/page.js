@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { FiAlertCircle } from "react-icons/fi";
+import { FiAlertCircle, FiChevronRight } from "react-icons/fi";
+import Card from "@/Components/Card/Card";
 import ProductGallery from "@/Components/Product/ProductGallery";
 import ProductTags from "@/Components/Product/ProductTags";
 import ProductDetailInteractive from "@/Components/Product/ProductDetailInteractive";
@@ -53,6 +54,29 @@ export default async function ProductDetailPage({ params }) {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 md:px-8">
+      <nav className="mb-6 flex items-center gap-1.5 text-xs text-(--secondary-text) max-md:hidden">
+        <Link href="/" className="hover:text-(--primary)">
+          Home
+        </Link>
+        <FiChevronRight size={12} />
+        <Link href="/products" className="hover:text-(--primary)">
+          Products
+        </Link>
+        {product.category?.name && (
+          <>
+            <FiChevronRight size={12} />
+            <Link
+              href={`/category/${product.category.id}`}
+              className="hover:text-(--primary)"
+            >
+              {product.category.name}
+            </Link>
+          </>
+        )}
+        <FiChevronRight size={12} />
+        <span className="text-(--foreground)">{product.name}</span>
+      </nav>
+
       <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
         <ProductGallery product={product} />
 
@@ -90,7 +114,7 @@ export default async function ProductDetailPage({ params }) {
 
       <div className="mt-10 flex flex-col gap-6 md:mt-14">
         {product.longDescription && (
-          <section className="rounded-2xl border border-(--border-color) bg-(--surface) p-5 shadow-sm md:p-6">
+          <Card as="section">
             <h2 className="mb-4 font-heading text-xl text-(--primary) md:text-2xl">
               Product Details
             </h2>
@@ -98,22 +122,22 @@ export default async function ProductDetailPage({ params }) {
               className="prose prose-sm max-w-none text-(--secondary-text)"
               dangerouslySetInnerHTML={{ __html: product.longDescription }}
             />
-          </section>
+          </Card>
         )}
 
         {(product.nutrition || product.composition?.length > 0) && (
-          <section className="rounded-2xl border border-(--border-color) bg-(--surface) p-5 shadow-sm md:p-6">
+          <Card as="section">
             <NutritionAndComposition product={product} />
-          </section>
+          </Card>
         )}
 
-        <section className="rounded-2xl border border-(--border-color) bg-(--surface) p-5 shadow-sm md:p-6">
+        <Card as="section">
           <ShelfLifeAndServing product={product} />
-        </section>
+        </Card>
 
-        <section className="rounded-2xl border border-(--border-color) bg-(--surface) p-5 shadow-sm md:p-6">
+        <Card as="section">
           <ProductReviews productId={product.id} productName={product.name} reviews={reviews} />
-        </section>
+        </Card>
       </div>
 
       <RelatedProducts categoryId={product.categoryId} excludeId={product.id} />

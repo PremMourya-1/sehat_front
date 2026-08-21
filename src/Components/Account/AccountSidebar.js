@@ -20,7 +20,12 @@ export default function AccountSidebar() {
       </h2>
       <nav className="flex flex-col gap-1">
         {links.map(({ label, href, icon: Icon }) => {
-          const isActive = pathname === href;
+          // "My Account" (href "/account") only matches exactly — it's a
+          // prefix of every other link here, so startsWith would light it up
+          // everywhere. Every other link also covers its own nested routes
+          // (e.g. an order's /account/orders/[id] tracking page keeps "My
+          // Orders" highlighted).
+          const isActive = href === "/account" ? pathname === href : pathname.startsWith(href);
           return (
             <Link
               key={href}

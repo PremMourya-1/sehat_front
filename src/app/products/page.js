@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { FiSearch } from "react-icons/fi";
+import { FiChevronDown, FiSearch } from "react-icons/fi";
 import { productApi, categoryApi } from "@/Service/api";
 import useDebounce from "@/Hooks/useDebounce";
 import ProductCard from "@/Components/Card/ProductCard";
+import ProductCardSkeleton from "@/Components/Card/ProductCardSkeleton";
 import Button from "@/Components/Button/Button";
-import Loader from "@/Components/Common/Loader/Loader";
 
 const PAGE_SIZE = 12;
 
@@ -109,34 +109,48 @@ export default function ProductsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search almonds, cashews, walnuts..."
-            className="w-full rounded-full border border-(--border-color) bg-(--surface) py-2.5 pl-11 pr-4 text-sm outline-none focus:border-(--primary)"
+            className="w-full rounded-full border border-(--border-color) bg-(--surface) py-3 pl-11 pr-4 text-sm outline-none transition-colors focus:border-(--primary) focus:ring-2 focus:ring-(--primary)/15"
           />
         </div>
         {categories.length > 0 && (
-          <select
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className="rounded-full border border-(--border-color) bg-(--surface) px-4 py-2.5 text-sm outline-none focus:border-(--primary)"
-          >
-            <option value="">All Categories</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
+          <div className="relative sm:w-56">
+            <select
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+              className="w-full appearance-none rounded-full border border-(--border-color) bg-(--surface) px-4 py-3 pr-10 text-sm outline-none transition-colors focus:border-(--primary) focus:ring-2 focus:ring-(--primary)/15"
+            >
+              <option value="">All Categories</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+            <FiChevronDown
+              className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-(--secondary-text)"
+              size={16}
+            />
+          </div>
         )}
       </div>
 
       <div className="mt-10">
         {loading ? (
-          <Loader label="Loading products..." />
+          <div className="grid grid-cols-2 gap-3 max-[400px]:gap-2 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 md:gap-6">
+            {Array.from({ length: PAGE_SIZE }).map((_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
+          </div>
         ) : products.length === 0 ? (
           <p className="py-16 text-center text-(--secondary-text)">
             No products found. Try a different search or category.
           </p>
         ) : (
           <>
+            <p className="mb-4 text-sm text-(--secondary-text)">
+              {products.length} product{products.length === 1 ? "" : "s"}
+              {hasMore ? "+" : ""}
+            </p>
             <div className="grid grid-cols-2 gap-3 max-[400px]:gap-2 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 md:gap-6">
               {products.map((product) => (
                 <ProductCard key={product.id} product={product} />

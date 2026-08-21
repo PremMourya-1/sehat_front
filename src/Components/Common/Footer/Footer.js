@@ -188,8 +188,6 @@ export default function Footer() {
 
       <div className="relative z-10 border-t border-(--surface)/10 px-8 py-4 text-center text-xs text-(--surface)/60 max-md:px-4">
         &copy; {year} {BRAND_NAME}. All rights reserved.
-        <br />
-        <p> Developed by Prem Mourya || Mo : +91 8824 644 769 </p>
       </div>
     </footer>
   );

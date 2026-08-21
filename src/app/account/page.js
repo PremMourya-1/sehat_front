@@ -1,6 +1,8 @@
 "use client";
 
 import { useSession } from "next-auth/react";
+import { FiUser } from "react-icons/fi";
+import Card from "@/Components/Card/Card";
 import Loader from "@/Components/Common/Loader/Loader";
 
 export default function AccountPage() {
@@ -11,13 +13,20 @@ export default function AccountPage() {
   const profile = session?.user;
 
   return (
-    <div className="rounded-2xl border border-(--border-color) bg-(--surface) p-6">
-      <h1 className="font-heading text-2xl text-(--primary)">My Account</h1>
-      <p className="mt-1 text-sm text-(--secondary-text)">
-        Your personal details, on file with Sehat Potli.
-      </p>
+    <Card>
+      <div className="flex items-center gap-4">
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-(--primary)/10 text-(--primary)">
+          <FiUser size={24} />
+        </span>
+        <div>
+          <h1 className="font-heading text-2xl text-(--primary)">My Account</h1>
+          <p className="mt-0.5 text-sm text-(--secondary-text)">
+            Your personal details, on file with Sehat Potli.
+          </p>
+        </div>
+      </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-4 border-t border-(--border-color) pt-6 sm:grid-cols-2">
         <div>
           <p className="text-xs uppercase tracking-wide text-(--secondary-text)">Name</p>
           <p className="mt-1 font-medium text-(--foreground)">
@@ -37,6 +46,6 @@ export default function AccountPage() {
           </p>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

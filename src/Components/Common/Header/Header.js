@@ -58,6 +58,10 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-(--border-color) bg-(--surface)/90 backdrop-blur">
+      <div className="hidden bg-(--btn-primary) py-1.5 text-center text-xs tracking-wide text-(--surface)/90 sm:block">
+        100% Natural &amp; FSSAI Certified &middot; Free Shipping on Prepaid Orders
+      </div>
+
       <div className="relative mx-auto flex max-w-7xl items-center justify-between px-8 py-3 max-md:px-4">
         <Link href="/" className="flex items-center leading-none">
           <Image
@@ -152,7 +156,7 @@ export default function Header() {
 
           <button
             type="button"
-            className="hidden text-(--foreground) max-md:block"
+            className="hidden h-10 w-10 items-center justify-center text-(--foreground) max-md:flex"
             onClick={() => setMobileOpen((v) => !v)}
             aria-label="Menu"
           >
@@ -162,13 +166,13 @@ export default function Header() {
       </div>
 
       {mobileOpen && (
-        <div className="absolute inset-x-0 top-full z-50 hidden border-t border-(--border-color) bg-(--surface) px-4 py-4 shadow-lg max-md:block">
-          <nav className="flex flex-col gap-3">
+        <div className="animate-fade-in-up absolute inset-x-0 top-full z-50 hidden border-t border-(--border-color) bg-(--surface) px-4 py-4 shadow-lg max-md:block">
+          <nav className="flex flex-col divide-y divide-(--border-color)">
             {headerNavData.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-sm font-medium text-(--foreground)"
+                className="py-3 text-sm font-medium text-(--foreground)"
               >
                 {link.label}
               </Link>
@@ -177,20 +181,20 @@ export default function Header() {
               <>
                 <Link
                   href="/account"
-                  className="text-sm font-medium text-(--foreground)"
+                  className="py-3 text-sm font-medium text-(--foreground)"
                 >
                   My Account
                 </Link>
                 <Link
                   href="/account/orders"
-                  className="text-sm font-medium text-(--foreground)"
+                  className="py-3 text-sm font-medium text-(--foreground)"
                 >
                   My Orders
                 </Link>
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="text-left text-sm font-medium text-(--danger)"
+                  className="py-3 text-left text-sm font-medium text-(--danger)"
                 >
                   Logout
                 </button>
@@ -199,7 +203,7 @@ export default function Header() {
               <button
                 type="button"
                 onClick={handleAuthOpen}
-                className="text-left text-sm font-medium text-(--primary)"
+                className="py-3 text-left text-sm font-medium text-(--primary)"
               >
                 Login
               </button>

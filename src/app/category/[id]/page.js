@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { FiChevronRight } from "react-icons/fi";
 import ProductCard from "@/Components/Card/ProductCard";
 import { categoryApi, productApi } from "@/Service/api";
 
@@ -34,6 +36,18 @@ export default async function CategoryPage({ params }) {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 md:px-8">
+      <nav className="mb-6 flex items-center justify-center gap-1.5 text-xs text-(--secondary-text)">
+        <Link href="/" className="hover:text-(--primary)">
+          Home
+        </Link>
+        <FiChevronRight size={12} />
+        <Link href="/products" className="hover:text-(--primary)">
+          Products
+        </Link>
+        <FiChevronRight size={12} />
+        <span className="text-(--foreground)">{category.name}</span>
+      </nav>
+
       <div className="text-center">
         <h1 className="font-heading text-3xl text-(--primary) md:text-4xl">
           {category.name}
@@ -49,11 +63,16 @@ export default async function CategoryPage({ params }) {
             No products available in this category yet.
           </p>
         ) : (
-          <div className="grid grid-cols-2 gap-3 max-[400px]:gap-2 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 md:gap-6">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          <>
+            <p className="mb-4 text-sm text-(--secondary-text)">
+              {products.length} product{products.length === 1 ? "" : "s"}
+            </p>
+            <div className="grid grid-cols-2 gap-3 max-[400px]:gap-2 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 md:gap-6">
+              {products.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>

@@ -2,6 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useDispatch } from "react-redux";
+import { FiUser } from "react-icons/fi";
 import { openAuthModal } from "@/Store/Slices/uiSlice";
 import AccountSidebar from "@/Components/Account/AccountSidebar";
 import Button from "@/Components/Button/Button";
@@ -16,6 +17,9 @@ export default function AccountLayout({ children }) {
   if (status === "unauthenticated") {
     return (
       <div className="mx-auto flex max-w-xl flex-col items-center gap-4 px-4 py-24 text-center">
+        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-(--surface-alt) text-(--primary)">
+          <FiUser size={24} />
+        </span>
         <h1 className="font-heading text-2xl text-(--primary)">
           Login to View Your Account
         </h1>

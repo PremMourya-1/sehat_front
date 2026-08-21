@@ -5,11 +5,21 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useDispatch, useSelector } from "react-redux";
 import toast from "react-hot-toast";
-import { FiAlertCircle, FiCheckCircle, FiEdit2, FiMapPin } from "react-icons/fi";
+import {
+  FiAlertCircle,
+  FiCheckCircle,
+  FiCreditCard,
+  FiEdit2,
+  FiLock,
+  FiMapPin,
+  FiShoppingBag,
+  FiTruck,
+} from "react-icons/fi";
 import { clearCart, selectCartItems, selectCartSubtotal } from "@/Store/Slices/cartSlice";
 import { openAuthModal } from "@/Store/Slices/uiSlice";
 import { checkoutApi, couponApi, orderApi } from "@/Service/api";
 import Button from "@/Components/Button/Button";
+import Card from "@/Components/Card/Card";
 import Loader from "@/Components/Common/Loader/Loader";
 import MobileVerification from "@/Components/Checkout/MobileVerification";
 import FloatingLabelInput from "@/Components/Form/FloatingLabelInput";
@@ -164,6 +174,9 @@ export default function CheckoutPage() {
   if (status === "unauthenticated") {
     return (
       <div className="mx-auto flex max-w-xl flex-col items-center gap-4 px-4 py-24 text-center">
+        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-(--surface-alt) text-(--primary)">
+          <FiLock size={24} />
+        </span>
         <h1 className="font-heading text-2xl text-(--primary)">Login Required</h1>
         <p className="text-(--secondary-text)">
           Please login to continue to checkout.
@@ -179,6 +192,9 @@ export default function CheckoutPage() {
   if (paymentInit) {
     return (
       <div className="mx-auto flex max-w-xl flex-col items-center gap-4 px-4 py-24 text-center">
+        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-(--surface-alt) text-(--primary)">
+          <FiCreditCard size={24} />
+        </span>
         <h1 className="font-heading text-2xl text-(--primary)">Complete Your Payment</h1>
         <p className="text-(--secondary-text)">
           Order <strong className="text-(--foreground)">{paymentInit.orderNumber}</strong> has been created and is
@@ -197,6 +213,9 @@ export default function CheckoutPage() {
   if (items.length === 0) {
     return (
       <div className="mx-auto flex max-w-xl flex-col items-center gap-4 px-4 py-24 text-center">
+        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-(--surface-alt) text-(--primary)">
+          <FiShoppingBag size={24} />
+        </span>
         <h1 className="font-heading text-2xl text-(--primary)">Your Cart is Empty</h1>
         <Button url="/products">Continue Shopping</Button>
       </div>
@@ -328,12 +347,15 @@ export default function CheckoutPage() {
 
       <form onSubmit={handlePlaceOrder} className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="flex flex-col gap-4 lg:col-span-2">
-          <div className="rounded-2xl border border-(--border-color) bg-(--surface) p-6">
+          <Card>
             <h2 className="font-heading text-xl text-(--primary)">Shipping Details</h2>
 
             <div className="mt-4 rounded-xl border border-(--border-color) bg-(--surface-alt) p-4">
-              <p className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-(--foreground)">
-                <FiMapPin size={15} className="text-(--primary)" /> Step 1 &middot; Verify Delivery
+              <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-(--foreground)">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-(--primary) text-xs text-(--surface)">
+                  1
+                </span>
+                <FiMapPin size={15} className="text-(--primary)" /> Verify Delivery
               </p>
 
               {pincodeVerified ? (
@@ -388,7 +410,12 @@ export default function CheckoutPage() {
 
             <div className="my-5 border-t border-(--border-color)" />
 
-            <p className="mb-3 text-sm font-semibold text-(--foreground)">Step 2 &middot; Your Details</p>
+            <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-(--foreground)">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-(--primary) text-xs text-(--surface)">
+                2
+              </span>
+              Your Details
+            </p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FloatingLabelInput
                 id="shipping-name"
@@ -437,8 +464,9 @@ export default function CheckoutPage() {
                     checked={paymentMethod === "cod"}
                     onChange={() => setPaymentMethod("cod")}
                     disabled={!pincodeVerified || !codOffered}
-                    className="h-4 w-4"
+                    className="h-4 w-4 accent-(--primary)"
                   />
+                  <FiTruck size={16} className="text-(--primary)" />
                   Cash on Delivery
                 </span>
                 {pincodeVerified && codDisabledReason && (
@@ -458,14 +486,15 @@ export default function CheckoutPage() {
                   checked={paymentMethod === "prepaid"}
                   onChange={() => setPaymentMethod("prepaid")}
                   disabled={!pincodeVerified}
-                  className="h-4 w-4"
+                  className="h-4 w-4 accent-(--primary)"
                 />
+                <FiCreditCard size={16} className="text-(--primary)" />
                 <span className="text-sm font-medium text-(--foreground)">Pay Online</span>
               </label>
             </div>
-          </div>
+          </Card>
 
-          <div className="rounded-2xl border border-(--border-color) bg-(--surface) p-6">
+          <Card>
             <h2 className="font-heading text-xl text-(--primary)">Have a Coupon?</h2>
             <div className="mt-4 flex gap-3">
               <FloatingLabelInput
@@ -487,10 +516,10 @@ export default function CheckoutPage() {
                 </Button>
               )}
             </div>
-          </div>
+          </Card>
         </div>
 
-        <div className="h-fit rounded-2xl border border-(--border-color) bg-(--surface) p-6">
+        <Card className="h-fit">
           <h2 className="font-heading text-xl text-(--primary)">Order Summary</h2>
           <ul className="mt-4 flex flex-col gap-2 text-sm text-(--secondary-text)">
             {items.map((item) => (
@@ -531,7 +560,11 @@ export default function CheckoutPage() {
           <Button type="submit" className="mt-6 w-full" disabled={!canPlaceOrder || placingOrder}>
             {placingOrder ? "Placing Order..." : "Place Order"}
           </Button>
-        </div>
+          <p className="mt-4 flex items-center justify-center gap-1.5 text-xs text-(--secondary-text)">
+            <FiLock size={13} className="text-(--primary)" />
+            Secure checkout &middot; Razorpay encrypted payments
+          </p>
+        </Card>
       </form>
     </div>
   );
