@@ -5,6 +5,7 @@ import { signIn } from "next-auth/react";
 import { useDispatch, useSelector } from "react-redux";
 import toast from "react-hot-toast";
 import { FiX, FiMail } from "react-icons/fi";
+import { FcGoogle } from "react-icons/fc";
 import { authApi } from "@/Service/api";
 import {
   closeAuthModal,
@@ -40,6 +41,7 @@ export default function AuthModal() {
   const [otp, setOtp] = useState("");
   const [otpLoading, setOtpLoading] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -160,6 +162,18 @@ export default function AuthModal() {
     }
   };
 
+  // Full-page redirect flow (Google's own consent screen, then back to
+  // callbackUrl) — no inline toast/error handling like the credentials form
+  // above, since control leaves the app entirely until the redirect back.
+  // Works identically whether this is the customer's first-ever sign-in
+  // (auto-creates a Customer, see the "createUser" event in src/auth.js) or
+  // a returning one (including one that originally registered via the
+  // email+OTP form — NextAuth links by matching email, doesn't duplicate).
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    await signIn("google", { callbackUrl });
+  };
+
   const handleResendOtp = async () => {
     if (cooldown > 0) return;
     try {
@@ -245,6 +259,22 @@ export default function AuthModal() {
               >
                 Register
               </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={googleLoading}
+              className="mb-4 flex w-full items-center justify-center gap-2.5 rounded-full border border-(--border-color) bg-(--surface) py-2.5 text-sm font-medium text-(--foreground) transition-colors hover:bg-(--background) disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <FcGoogle size={18} />
+              {googleLoading ? "Redirecting..." : "Continue with Google"}
+            </button>
+
+            <div className="mb-4 flex items-center gap-3">
+              <div className="h-px flex-1 bg-(--border-color)" />
+              <span className="text-xs text-(--secondary-text)">or</span>
+              <div className="h-px flex-1 bg-(--border-color)" />
             </div>
 
             {view === AUTH_VIEWS.LOGIN ? (

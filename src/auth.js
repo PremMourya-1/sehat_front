@@ -1,10 +1,10 @@
 import NextAuth from "next-auth";
 import { CredentialsSignin } from "next-auth";
-// Google + Email(Resend) magic-link providers — commented out for now per
-// request (password + email-OTP is the active flow). Re-enable by
-// uncommenting these imports/provider blocks and the "google"/"resend"
-// entries in the providers array below.
-// import Google from "next-auth/providers/google";
+import Google from "next-auth/providers/google";
+// Email(Resend) magic-link provider — still commented out per request
+// (password + email-OTP + Google is the active set). Re-enable by
+// uncommenting this import and the "resend" entry in the providers array
+// below.
 // import Resend from "next-auth/providers/resend";
 import Credentials from "next-auth/providers/credentials";
 import { authAdapter, verifyCredentials } from "@/lib/authAdapter";
@@ -42,15 +42,41 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: authAdapter,
   session: { strategy: "jwt" },
   secret: process.env.AUTH_SECRET,
+  events: {
+    // Auth.js's own core (see @auth/core handle-login.js) always creates a
+    // brand-new OAuth/magic-link user with emailVerified: null, regardless
+    // of what the provider's profile actually claims — there's no way to
+    // override that from the provider config itself (it spreads the
+    // profile, then unconditionally sets emailVerified: null after). Google
+    // requires verified email ownership to have an account at all, so
+    // that's simply wrong for a Google sign-up — correct it immediately
+    // after creation via our own adapter, before the customer's first
+    // session is issued. Runs after any OAuth/email-provider createUser
+    // (only Google today), never after the "credentials" provider — that
+    // one never calls adapter.createUser(), it only reads an
+    // already-existing Customer via verifyCredentials().
+    async createUser({ user }) {
+      await authAdapter.updateUser({ id: user.id, emailVerified: new Date() });
+    },
+  },
   providers: [
-    // Google({
-    //   clientId: process.env.GOOGLE_CLIENT_ID,
-    //   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    //   // Safe here: Google verifies email ownership itself, so linking a
-    //   // Google sign-in to an existing account with the same email is
-    //   // correct, not "dangerous".
-    //   allowDangerousEmailAccountLinking: true,
-    // }),
+    // Only registered once real credentials exist — same "safe to leave
+    // unconfigured" convention as the backend's third-party integrations
+    // (Shiprocket/Razorpay/Resend) — so a fresh clone or an env without
+    // Google Cloud OAuth set up yet still boots fine; the "Continue with
+    // Google" button just won't be wired to anything until this is set.
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+      ? [
+          Google({
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            // Safe here: Google verifies email ownership itself, so linking a
+            // Google sign-in to an existing account with the same email is
+            // correct, not "dangerous".
+            allowDangerousEmailAccountLinking: true,
+          }),
+        ]
+      : []),
     // Resend({
     //   id: "email",
     //   apiKey: process.env.RESEND_API_KEY,
