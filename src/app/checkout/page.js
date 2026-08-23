@@ -64,11 +64,6 @@ export default function CheckoutPage() {
   const [codPolicy, setCodPolicy] = useState(null); // { available, reason } | null
   const [paymentMethod, setPaymentMethod] = useState("cod");
 
-  // Set once a prepaid order has actually been created in the DB (with a
-  // Razorpay order attached) — from that point on we never re-submit the
-  // form (that would create a duplicate order); the customer either
-  // completes payment or retries the same Razorpay order.
-  const [paymentInit, setPaymentInit] = useState(null); // { razorpayOrderId, razorpayKeyId, amount, orderNumber } | null
   const [verifyingPayment, setVerifyingPayment] = useState(false);
 
   // Site-wide toggle (Settings > General in the admin panel, see
@@ -136,10 +131,6 @@ export default function CheckoutPage() {
     }
   }, [subtotal, appliedCoupon, couponSubtotalSnapshot]);
 
-  // Declared before any early return below (paymentInit's "Complete Your
-  // Payment" panel references openRazorpayModal in a click handler) — both
-  // just close over state setters/router/toast, no dependency on anything
-  // declared further down.
   const handlePaymentSuccess = async (response) => {
     setVerifyingPayment(true);
     try {
@@ -149,28 +140,37 @@ export default function CheckoutPage() {
         razorpay_signature: response.razorpay_signature,
       });
       if (res.data.action) {
+        // Only cleared on confirmed success — see openRazorpayModal for why
+        // it's deliberately still intact if the customer gets this far and
+        // then backs out.
+        dispatch(clearCart());
         toast.success("Payment successful! Order confirmed.");
         router.push(`/account/orders/${res.data.data.id}`);
       } else {
         toast.error(res.data.message || "Payment verification failed. Please contact support with your payment ID.");
+        setPlacingOrder(false);
       }
     } catch (error) {
       toast.error(
         error?.response?.data?.message ||
           "Payment verification failed. If money was deducted, please contact support with your payment ID.",
       );
+      setPlacingOrder(false);
     } finally {
       setVerifyingPayment(false);
     }
   };
 
-  // Razorpay's own hosted checkout widget — never a custom payment form.
-  // Safe to call again for a retry: reuses the same razorpayOrderId already
-  // created server-side, no new backend call.
-  const openRazorpayModal = async ({ razorpayOrderId, razorpayKeyId, amount, orderNumber }) => {
+  // Razorpay's own hosted checkout widget — never a custom payment form, and
+  // never swaps this page's own content away either: it's a modal overlay
+  // on top of the checkout form, which stays exactly as the customer left
+  // it underneath. That matters specifically for what happens if they close
+  // it without paying — see ondismiss below.
+  const openRazorpayModal = async ({ razorpayOrderId, razorpayKeyId, amount, orderNumber, orderId }) => {
     const loaded = await loadRazorpayScript();
     if (!loaded || typeof window === "undefined" || !window.Razorpay) {
       toast.error("Could not load the payment gateway. Please retry.");
+      setPlacingOrder(false);
       return;
     }
 
@@ -185,7 +185,27 @@ export default function CheckoutPage() {
       theme: { color: "#2E4A3B" },
       handler: (response) => handlePaymentSuccess(response),
       modal: {
-        ondismiss: () => toast("Payment was not completed. You can retry anytime."),
+        // Fires when the customer closes Razorpay's window (X, Escape,
+        // clicking outside) without completing payment. The order created
+        // just before this modal opened was never actually paid for, so it
+        // gets cancelled here the same way the customer's own "Cancel
+        // Order" button would (restocks the items, no-ops the refund since
+        // nothing was ever charged) — instead of lingering as an
+        // unfulfillable "prepaid, unpaid" order that later breaks admin
+        // label generation. The cart was never cleared for this path (see
+        // handlePlaceOrder), so the customer lands right back on this same
+        // filled-in checkout form, not a separate retry/pay-later screen.
+        ondismiss: async () => {
+          try {
+            await orderApi.cancel(orderId, "Payment window closed before completing payment");
+          } catch {
+            // Best-effort — even if this fails (e.g. some other path
+            // already cancelled it), the customer still lands back on a
+            // normal, usable checkout page either way.
+          }
+          toast("Payment wasn't completed, so that order was cancelled. Feel free to try again.");
+          setPlacingOrder(false);
+        },
       },
     });
 
@@ -205,31 +225,6 @@ export default function CheckoutPage() {
         <p className="text-(--secondary-text)">
           Please login to continue to checkout.
         </p>
-      </div>
-    );
-  }
-
-  // The order (and its Razorpay order) already exist server-side once this
-  // is set — the cart's been cleared too, so the empty-cart check below
-  // would otherwise take over. Stays here until payment is verified (which
-  // navigates away) instead of ever re-showing the form.
-  if (paymentInit) {
-    return (
-      <div className="mx-auto flex max-w-xl flex-col items-center gap-4 px-4 py-24 text-center">
-        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-(--surface-alt) text-(--primary)">
-          <FiCreditCard size={24} />
-        </span>
-        <h1 className="font-heading text-2xl text-(--primary)">Complete Your Payment</h1>
-        <p className="text-(--secondary-text)">
-          Order <strong className="text-(--foreground)">{paymentInit.orderNumber}</strong> has been created and is
-          waiting for payment.
-        </p>
-        <Button onClick={() => openRazorpayModal(paymentInit)} disabled={verifyingPayment}>
-          {verifyingPayment ? "Verifying..." : "Retry Payment"}
-        </Button>
-        <Button variant="outline" url={`/account/orders/${paymentInit.orderId}`}>
-          I&apos;ll Pay Later
-        </Button>
       </div>
     );
   }
@@ -345,24 +340,35 @@ export default function CheckoutPage() {
       const res = await orderApi.create(payload);
       if (res.data.action) {
         const orderData = res.data.data;
-        dispatch(clearCart());
 
         if (paymentMethod === "prepaid" && orderData.razorpay) {
-          const init = { ...orderData.razorpay, orderNumber: orderData.orderNumber, orderId: orderData.id };
-          setPaymentInit(init);
-          openRazorpayModal(init);
+          // Cart deliberately NOT cleared here — this order isn't paid for
+          // yet. openRazorpayModal's handler clears it on confirmed
+          // success; its ondismiss cancels this order and leaves the cart
+          // (and placingOrder) exactly as they are so the customer is still
+          // looking at a normal, usable checkout form either way.
+          openRazorpayModal({
+            ...orderData.razorpay,
+            orderNumber: orderData.orderNumber,
+            orderId: orderData.id,
+          });
         } else {
+          dispatch(clearCart());
           toast.success("Order placed successfully!");
           router.push(`/account/orders/${orderData.id}`);
+          setPlacingOrder(false);
         }
       } else {
         toast.error(res.data.message || "Could not place order");
+        setPlacingOrder(false);
       }
     } catch (error) {
       toast.error(error?.response?.data?.message || "Could not place order");
-    } finally {
       setPlacingOrder(false);
     }
+    // No top-level `finally` — the prepaid/Razorpay path intentionally
+    // leaves placingOrder(true) (button stays disabled, no double-submit)
+    // until openRazorpayModal's handler or ondismiss resolves it.
   };
 
   return (
