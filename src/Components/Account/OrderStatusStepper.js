@@ -1,5 +1,6 @@
-import { FiCheck, FiHome, FiMapPin, FiPackage, FiRotateCcw, FiTruck } from "react-icons/fi";
+import { FiCheck, FiHome, FiMapPin, FiPackage, FiRotateCcw, FiTruck, FiXCircle } from "react-icons/fi";
 import { CUSTOMER_STATUS_LABELS } from "@/Constant/Constant";
+import { formatDateTime } from "@/Utils/utils";
 
 // Same linear happy-path order as the backend's STATUS_PROGRESSION (see
 // utils/shiprocket.js isForwardProgress) — "rto" is deliberately not part of
@@ -18,21 +19,24 @@ const STEP_ICONS = {
   delivered: FiHome,
 };
 
-export default function OrderStatusStepper({ customerStatus }) {
+export default function OrderStatusStepper({ customerStatus, statusHistory }) {
   const isRto = customerStatus === "rto";
+  const isCancelled = customerStatus === "cancelled";
+  // Both are terminal branches off the normal sequence, not a position
+  // along it (same reasoning as "rto" already had) — the exact step either
+  // branched from isn't tracked, so every normal step renders muted and
+  // whichever banner below applies is the only definitive marker.
+  const isBranchState = isRto || isCancelled;
   const currentIndex = STEP_ORDER.indexOf(customerStatus);
 
   return (
     <div className="flex flex-col">
       {STEP_ORDER.map((step, index) => {
         const Icon = STEP_ICONS[step];
-        // Once a shipment is RTO, nothing in the normal sequence can be
-        // confidently marked "reached" — the exact step it branched from
-        // isn't tracked — so every normal step renders muted and the RTO
-        // banner below is the only definitive marker.
-        const isDone = !isRto && index <= currentIndex;
-        const isCurrent = !isRto && index === currentIndex;
+        const isDone = !isBranchState && index <= currentIndex;
+        const isCurrent = !isBranchState && index === currentIndex;
         const isLast = index === STEP_ORDER.length - 1;
+        const reachedAt = statusHistory?.[step];
 
         return (
           <div key={step} className="flex gap-3">
@@ -48,7 +52,7 @@ export default function OrderStatusStepper({ customerStatus }) {
               </span>
               {!isLast && (
                 <span
-                  className={`w-0.5 flex-1 ${index < currentIndex && !isRto ? "bg-(--primary)" : "bg-(--border-color)"}`}
+                  className={`w-0.5 flex-1 ${index < currentIndex && !isBranchState ? "bg-(--primary)" : "bg-(--border-color)"}`}
                   style={{ minHeight: "2rem" }}
                 />
               )}
@@ -61,7 +65,10 @@ export default function OrderStatusStepper({ customerStatus }) {
               >
                 {CUSTOMER_STATUS_LABELS[step]}
               </p>
-              {isCurrent && <p className="text-xs text-(--secondary-text)">Current status</p>}
+              {isDone && reachedAt && (
+                <p className="text-xs text-(--secondary-text)">{formatDateTime(reachedAt)}</p>
+              )}
+              {isCurrent && !reachedAt && <p className="text-xs text-(--secondary-text)">Current status</p>}
             </div>
           </div>
         );
@@ -75,6 +82,18 @@ export default function OrderStatusStepper({ customerStatus }) {
           <div>
             <p className="text-sm font-medium text-(--danger)">{CUSTOMER_STATUS_LABELS.rto}</p>
             <p className="text-xs text-(--secondary-text)">This shipment is being returned to origin.</p>
+          </div>
+        </div>
+      )}
+
+      {isCancelled && (
+        <div className="mt-2 flex items-center gap-3 rounded-xl border border-(--danger)/30 bg-(--danger)/5 p-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-(--danger)/15 text-(--danger)">
+            <FiXCircle size={16} />
+          </span>
+          <div>
+            <p className="text-sm font-medium text-(--danger)">{CUSTOMER_STATUS_LABELS.cancelled}</p>
+            <p className="text-xs text-(--secondary-text)">This order has been cancelled.</p>
           </div>
         </div>
       )}

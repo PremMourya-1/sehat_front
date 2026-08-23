@@ -20,6 +20,23 @@ export const formatDate = (value) => {
   });
 };
 
+// Same as formatDate but with a time-of-day, for per-stage timestamps (e.g.
+// order tracking stepper's statusHistory) where the date alone doesn't
+// distinguish same-day transitions.
+export const formatDateTime = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
 export const getDiscountPercent = (mrp, price) => {
   const mrpNum = Number(mrp) || 0;
   const priceNum = Number(price) || 0;

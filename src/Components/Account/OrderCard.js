@@ -15,6 +15,7 @@ const STATUS_STYLES = {
   out_for_delivery: "bg-(--primary)/15 text-(--primary)",
   delivered: "bg-(--success)/15 text-(--success)",
   rto: "bg-(--danger)/15 text-(--danger)",
+  cancelled: "bg-(--danger)/15 text-(--danger)",
 };
 
 export default function OrderCard({ order }) {

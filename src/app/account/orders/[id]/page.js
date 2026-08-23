@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { FiChevronRight, FiExternalLink, FiPackage, FiTruck } from "react-icons/fi";
+import toast from "react-hot-toast";
+import { FiAlertTriangle, FiChevronRight, FiExternalLink, FiPackage, FiTruck, FiXCircle } from "react-icons/fi";
 import { orderApi } from "@/Service/api";
 import { CUSTOMER_STATUS_LABELS } from "@/Constant/Constant";
 import Card from "@/Components/Card/Card";
@@ -19,29 +20,57 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
+  // Self-cancel — only ever offered while customerStatus is "confirmed"
+  // (see controllers/orderController.js cancelOrder for the same check
+  // enforced server-side too). "confirming" is a two-step guard against an
+  // accidental tap: clicking "Cancel Order" just reveals the reason field +
+  // a final confirm button, it doesn't cancel anything by itself.
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelling, setCancelling] = useState(false);
+
   useEffect(() => {
-    let cancelled = false;
+    let ignore = false;
     setLoading(true);
     setNotFound(false);
 
     orderApi
       .getById(id)
       .then((res) => {
-        if (cancelled) return;
+        if (ignore) return;
         if (res.data.action) setOrder(res.data.data);
         else setNotFound(true);
       })
       .catch(() => {
-        if (!cancelled) setNotFound(true);
+        if (!ignore) setNotFound(true);
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!ignore) setLoading(false);
       });
 
     return () => {
-      cancelled = true;
+      ignore = true;
     };
   }, [id]);
+
+  const handleCancelOrder = async () => {
+    setCancelling(true);
+    try {
+      const res = await orderApi.cancel(id, cancelReason.trim() || undefined);
+      if (res.data.action) {
+        toast.success(res.data.message || "Order cancelled");
+        setOrder(res.data.data);
+        setConfirmingCancel(false);
+        setCancelReason("");
+      } else {
+        toast.error(res.data.message || "Could not cancel order");
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Could not cancel order");
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   if (loading) return <Loader />;
 
@@ -93,13 +122,90 @@ export default function OrderDetailPage() {
         <div className="flex flex-col gap-6 lg:col-span-2">
           <Card>
             <h2 className="mb-4 font-heading text-lg text-(--primary)">Order Status</h2>
-            <OrderStatusStepper customerStatus={order.customerStatus} />
+            <OrderStatusStepper customerStatus={order.customerStatus} statusHistory={order.statusHistory} />
             {(order.awbCode || order.courierName) && (
               <p className="mt-4 border-t border-(--border-color) pt-4 text-xs text-(--secondary-text)">
                 {order.courierName && <>Courier: {order.courierName}</>}
                 {order.courierName && order.awbCode && " · "}
                 {order.awbCode && <>AWB: {order.awbCode}</>}
               </p>
+            )}
+            {order.estimatedDeliveryDate && (
+              <p className="mt-2 text-sm font-medium text-(--foreground)">
+                Estimated Delivery: {formatDate(order.estimatedDeliveryDate)}
+              </p>
+            )}
+
+            {order.customerStatus === "cancelled" && (
+              <div className="mt-4 border-t border-(--border-color) pt-4 text-xs text-(--secondary-text)">
+                Cancelled on {formatDate(order.cancelledAt)}
+                {order.cancelledBy === "customer" && order.cancellationReason && (
+                  <> · Reason: {order.cancellationReason}</>
+                )}
+                {order.refundStatus && order.refundStatus !== "not_applicable" && (
+                  <p className="mt-1">
+                    Refund:{" "}
+                    {order.refundStatus === "completed"
+                      ? `${formatPrice(order.refundAmount)} refunded`
+                      : order.refundStatus === "pending"
+                        ? "in progress"
+                        : "failed — please contact support"}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {order.customerStatus === "confirmed" && (
+              <div className="mt-4 border-t border-(--border-color) pt-4">
+                {!confirmingCancel ? (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingCancel(true)}
+                    className="flex items-center gap-1.5 text-sm font-medium text-(--danger) underline"
+                  >
+                    <FiXCircle size={14} /> Cancel Order
+                  </button>
+                ) : (
+                  <div className="rounded-xl border border-(--danger)/30 bg-(--danger)/5 p-4">
+                    <p className="flex items-center gap-1.5 text-sm font-medium text-(--danger)">
+                      <FiAlertTriangle size={15} /> Are you sure you want to cancel this order?
+                    </p>
+                    <p className="mt-1 text-xs text-(--secondary-text)">
+                      This can&apos;t be undone. {order.paymentMethod === "prepaid" && order.paymentStatus === "paid"
+                        ? "Your payment will be refunded to the original payment method."
+                        : ""}
+                    </p>
+                    <textarea
+                      value={cancelReason}
+                      onChange={(e) => setCancelReason(e.target.value)}
+                      placeholder="Reason for cancelling (optional)"
+                      rows={2}
+                      className="mt-3 w-full rounded-lg border border-(--border-color) bg-(--surface) px-3 py-2 text-sm outline-none focus:border-(--primary)"
+                    />
+                    <div className="mt-3 flex gap-2">
+                      <Button
+                        type="button"
+                        onClick={handleCancelOrder}
+                        disabled={cancelling}
+                        className="!bg-(--danger) hover:!bg-(--danger)"
+                      >
+                        {cancelling ? "Cancelling..." : "Yes, Cancel Order"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setConfirmingCancel(false);
+                          setCancelReason("");
+                        }}
+                        disabled={cancelling}
+                      >
+                        Never Mind
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </Card>
 

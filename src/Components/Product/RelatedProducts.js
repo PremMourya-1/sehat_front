@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { productApi } from "@/Service/api";
 import ProductCard from "@/Components/Card/ProductCard";
+import ProductGrid from "@/Components/Product/ProductGrid";
 import Button from "@/Components/Button/Button";
 
 export default function RelatedProducts({ categoryId, excludeId }) {
@@ -64,11 +65,11 @@ export default function RelatedProducts({ categoryId, excludeId }) {
   return (
     <section className="py-12">
       <h2 className="font-heading text-2xl text-(--primary)">You may also like</h2>
-      <div className="mt-6 grid grid-cols-2 gap-3 max-[400px]:gap-2 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 md:gap-6">
+      <ProductGrid className="mt-6">
         {products.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}
-      </div>
+      </ProductGrid>
       {hasMore && (
         <div className="mt-8 flex justify-center">
           <Button variant="outline" onClick={loadMore} disabled={isPending}>

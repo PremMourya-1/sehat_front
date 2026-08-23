@@ -64,6 +64,7 @@ export const CUSTOMER_STATUS_LABELS = {
   out_for_delivery: "Out for Delivery",
   delivered: "Delivered",
   rto: "Returned to Origin",
+  cancelled: "Cancelled",
 };
 
 export const AUTH_VIEWS = {

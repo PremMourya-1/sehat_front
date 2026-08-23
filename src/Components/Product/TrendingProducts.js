@@ -2,6 +2,7 @@ import Link from "next/link";
 import { FiArrowRight } from "react-icons/fi";
 import Button from "@/Components/Button/Button";
 import ProductCard from "@/Components/Card/ProductCard";
+import ProductGrid from "@/Components/Product/ProductGrid";
 import SectionHeading from "@/Components/Common/SectionHeading";
 
 // "New Arrivals / Trending Now" — same layout as the Best Sellers row.
@@ -25,11 +26,11 @@ export default function TrendingProducts({ products = [] }) {
         </Link>
       </div>
 
-      <div className="mt-8 grid grid-cols-2 gap-3 max-[400px]:gap-2 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 md:gap-6">
+      <ProductGrid className="mt-8">
         {products.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}
-      </div>
+      </ProductGrid>
 
       <div className="mt-6 hidden max-md:flex max-md:justify-center">
         <Button url="/products" variant="outline" size="sm">

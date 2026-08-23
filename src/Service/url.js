@@ -6,6 +6,11 @@ export const mobileUrl = {
   verifyOtp: "/customer/mobile/verify-otp",
 };
 
+export const securityUrl = {
+  passwordStatus: "/customer/security/password-status",
+  updatePassword: "/customer/security/password",
+};
+
 // Registration (name/email/password + email OTP). Sign-in itself goes
 // through NextAuth's "credentials" provider — see next-auth/react's
 // signIn()/signOut(), not these.
@@ -13,6 +18,8 @@ export const authUrl = {
   register: "/auth/register",
   verifyOtp: "/auth/register/verify-otp",
   resendOtp: "/auth/register/resend-otp",
+  forgotPassword: "/auth/forgot-password",
+  resetPassword: "/auth/reset-password",
 };
 
 export const productUrl = {
@@ -41,9 +48,11 @@ export const orderUrl = {
   list: "/orders",
   recent: "/orders/recent",
   byId: (id) => `/orders/${id}`,
+  cancel: (id) => `/orders/${id}/cancel`,
 };
 
 export const checkoutUrl = {
+  config: "/checkout/config",
   checkPincode: "/checkout/check-pincode",
   codAvailability: "/checkout/cod-availability",
   verifyPayment: "/checkout/verify-payment",

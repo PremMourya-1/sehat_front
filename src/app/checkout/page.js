@@ -32,6 +32,7 @@ const DISABLED_FIELD_CLASS = "disabled:cursor-not-allowed disabled:opacity-50";
 const initialShipping = {
   shippingName: "",
   shippingPhone: "",
+  alternateMobile: "",
   shippingAddress: "",
 };
 
@@ -70,11 +71,34 @@ export default function CheckoutPage() {
   const [paymentInit, setPaymentInit] = useState(null); // { razorpayOrderId, razorpayKeyId, amount, orderNumber } | null
   const [verifyingPayment, setVerifyingPayment] = useState(false);
 
+  // Site-wide toggle (Settings > General in the admin panel, see
+  // utils/webSettings.js mobileVerificationRequired) — off by default since
+  // no SMS provider is configured yet. The OTP send/verify flow itself
+  // (Components/Checkout/MobileVerification.js) is untouched and starts
+  // gating checkout again the moment this is switched on, no code changes
+  // needed then.
+  const [mobileVerificationRequired, setMobileVerificationRequired] = useState(false);
+  const [configLoading, setConfigLoading] = useState(true);
+
   useEffect(() => {
     if (status === "unauthenticated") {
       dispatch(openAuthModal({ view: "login", redirectTo: "/checkout" }));
     }
   }, [status, dispatch]);
+
+  useEffect(() => {
+    checkoutApi
+      .getConfig()
+      .then((res) => {
+        if (res.data.action) setMobileVerificationRequired(Boolean(res.data.data.mobileVerificationRequired));
+      })
+      .catch(() => {
+        // Fail closed on "required" here would block checkout entirely if
+        // this call ever fails — leave the default (false) so a transient
+        // error never blocks orders over a feature that's off by default anyway.
+      })
+      .finally(() => setConfigLoading(false));
+  }, []);
 
   useEffect(() => {
     if (items.length === 0) return;
@@ -126,7 +150,7 @@ export default function CheckoutPage() {
       });
       if (res.data.action) {
         toast.success("Payment successful! Order confirmed.");
-        router.push("/account");
+        router.push(`/account/orders/${res.data.data.id}`);
       } else {
         toast.error(res.data.message || "Payment verification failed. Please contact support with your payment ID.");
       }
@@ -169,7 +193,7 @@ export default function CheckoutPage() {
     rzp.open();
   };
 
-  if (status === "loading") return <Loader fullScreen />;
+  if (status === "loading" || configLoading) return <Loader fullScreen />;
 
   if (status === "unauthenticated") {
     return (
@@ -203,7 +227,7 @@ export default function CheckoutPage() {
         <Button onClick={() => openRazorpayModal(paymentInit)} disabled={verifyingPayment}>
           {verifyingPayment ? "Verifying..." : "Retry Payment"}
         </Button>
-        <Button variant="outline" url="/account">
+        <Button variant="outline" url={`/account/orders/${paymentInit.orderId}`}>
           I&apos;ll Pay Later
         </Button>
       </div>
@@ -222,7 +246,7 @@ export default function CheckoutPage() {
     );
   }
 
-  if (!authUser?.mobileVerified) {
+  if (mobileVerificationRequired && !authUser?.mobileVerified) {
     return (
       <div className="mx-auto max-w-xl px-4 py-10">
         <h1 className="font-heading text-3xl text-(--primary)">Checkout</h1>
@@ -324,12 +348,12 @@ export default function CheckoutPage() {
         dispatch(clearCart());
 
         if (paymentMethod === "prepaid" && orderData.razorpay) {
-          const init = { ...orderData.razorpay, orderNumber: orderData.orderNumber };
+          const init = { ...orderData.razorpay, orderNumber: orderData.orderNumber, orderId: orderData.id };
           setPaymentInit(init);
           openRazorpayModal(init);
         } else {
           toast.success("Order placed successfully!");
-          router.push("/account");
+          router.push(`/account/orders/${orderData.id}`);
         }
       } else {
         toast.error(res.data.message || "Could not place order");
@@ -360,10 +384,21 @@ export default function CheckoutPage() {
 
               {pincodeVerified ? (
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="flex items-center gap-1.5 text-sm text-(--success)">
-                    <FiCheckCircle size={15} /> Delivery available to {pincode}
-                    {pincodeResult.codAvailable ? " · COD available" : " · Prepaid only"}
-                  </p>
+                  <div>
+                    <p className="flex items-center gap-1.5 text-sm text-(--success)">
+                      <FiCheckCircle size={15} /> Delivery available to {pincode}
+                      {pincodeResult.codAvailable ? " · COD available" : " · Prepaid only"}
+                    </p>
+                    {pincodeResult.estimatedDeliveryDays && (
+                      <p className="mt-1 flex items-center gap-1.5 text-sm text-(--secondary-text)">
+                        <FiTruck size={14} />
+                        Estimated delivery in{" "}
+                        {pincodeResult.estimatedDeliveryDays.min === pincodeResult.estimatedDeliveryDays.max
+                          ? `${pincodeResult.estimatedDeliveryDays.min} days`
+                          : `${pincodeResult.estimatedDeliveryDays.min}-${pincodeResult.estimatedDeliveryDays.max} days`}
+                      </p>
+                    )}
+                  </div>
                   <button
                     type="button"
                     onClick={handleChangePincode}
@@ -434,6 +469,17 @@ export default function CheckoutPage() {
                 pattern="[0-9]{10}"
                 value={shipping.shippingPhone}
                 onChange={handleShippingChange("shippingPhone")}
+                disabled={!pincodeVerified}
+                className={DISABLED_FIELD_CLASS}
+              />
+              <FloatingLabelInput
+                id="shipping-alternate-mobile"
+                type="tel"
+                label="Alternate mobile number (optional)"
+                pattern="[0-9]{10}"
+                title="Enter a 10-digit mobile number"
+                value={shipping.alternateMobile}
+                onChange={handleShippingChange("alternateMobile")}
                 disabled={!pincodeVerified}
                 className={DISABLED_FIELD_CLASS}
               />

@@ -6,6 +6,7 @@ import { productApi, categoryApi } from "@/Service/api";
 import useDebounce from "@/Hooks/useDebounce";
 import ProductCard from "@/Components/Card/ProductCard";
 import ProductCardSkeleton from "@/Components/Card/ProductCardSkeleton";
+import ProductGrid from "@/Components/Product/ProductGrid";
 import Button from "@/Components/Button/Button";
 
 const PAGE_SIZE = 12;
@@ -136,11 +137,11 @@ export default function ProductsPage() {
 
       <div className="mt-10">
         {loading ? (
-          <div className="grid grid-cols-2 gap-3 max-[400px]:gap-2 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 md:gap-6">
+          <ProductGrid>
             {Array.from({ length: PAGE_SIZE }).map((_, i) => (
               <ProductCardSkeleton key={i} />
             ))}
-          </div>
+          </ProductGrid>
         ) : products.length === 0 ? (
           <p className="py-16 text-center text-(--secondary-text)">
             No products found. Try a different search or category.
@@ -151,11 +152,11 @@ export default function ProductsPage() {
               {products.length} product{products.length === 1 ? "" : "s"}
               {hasMore ? "+" : ""}
             </p>
-            <div className="grid grid-cols-2 gap-3 max-[400px]:gap-2 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 md:gap-6">
+            <ProductGrid>
               {products.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
-            </div>
+            </ProductGrid>
             {hasMore && (
               <div className="mt-10 flex justify-center">
                 <Button
