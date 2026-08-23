@@ -65,8 +65,7 @@ export default function Header() {
       <div className="flex items-center justify-center gap-2 bg-(--danger) px-4 py-2 text-center text-xs font-medium text-white sm:text-sm">
         <FiAlertTriangle size={14} className="shrink-0" />
         <span>
-          Maintenance in progress — please avoid Prepaid orders right now (money may be deducted without
-          the order going through). Cash on Delivery is safe to use.
+          Maintenance in progress — please do not place any order right now, including Cash on Delivery.
         </span>
       </div>
 

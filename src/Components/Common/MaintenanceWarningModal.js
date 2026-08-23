@@ -53,18 +53,18 @@ export default function MaintenanceWarningModal() {
           <FiAlertTriangle size={26} />
         </span>
 
-        <h2 className="mt-4 font-heading text-xl text-(--primary)">Please Read Before Ordering</h2>
+        <h2 className="mt-4 font-heading text-xl text-(--primary)">Please Do Not Order Right Now</h2>
 
         <p className="mt-3 text-sm text-(--secondary-text)">
-          We&apos;re currently doing maintenance work on our checkout &amp; payments system. Please avoid
-          placing new orders right now.
+          We&apos;re currently doing maintenance work on our checkout &amp; payments system.
         </p>
         <p className="mt-2 text-sm text-(--secondary-text)">
-          <strong className="text-(--danger)">Prepaid (online payment) orders:</strong> money may get
-          deducted from your account, but the order might not be confirmed or reach you.
+          <strong className="text-(--danger)">Please do not place any order right now</strong> — this
+          includes Cash on Delivery too. For prepaid orders, money may get deducted from your account, but
+          the order might not be confirmed or reach you.
         </p>
         <p className="mt-2 text-sm text-(--secondary-text)">
-          Cash on Delivery orders are safe to place as usual.
+          We&apos;ll remove this notice once everything is back to normal. Thank you for your patience.
         </p>
 
         <Button onClick={handleClose} className="mt-5 w-full" showArrow={false}>
