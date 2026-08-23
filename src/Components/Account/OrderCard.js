@@ -7,13 +7,17 @@ import { formatDate, formatPrice } from "@/Utils/utils";
 // Keyed by Order.customerStatus (see models/Order.js) — deliberately
 // separate from the admin's internal operational status, which customers
 // never see.
+// "Delivered" is the one terminal-positive state, so it gets a solid fill
+// instead of a tint — everything still in motion (dispatched through
+// out-for-delivery) shares the accent tint so "still on the way" reads as
+// one group, distinct at a glance from "actually arrived."
 const STATUS_STYLES = {
   confirmed: "bg-(--info)/15 text-(--info)",
-  dispatched: "bg-(--primary)/15 text-(--primary)",
-  picked_up: "bg-(--primary)/15 text-(--primary)",
-  in_transit: "bg-(--primary)/15 text-(--primary)",
-  out_for_delivery: "bg-(--primary)/15 text-(--primary)",
-  delivered: "bg-(--success)/15 text-(--success)",
+  dispatched: "bg-(--accent)/20 text-(--accent-secondary)",
+  picked_up: "bg-(--accent)/20 text-(--accent-secondary)",
+  in_transit: "bg-(--accent)/20 text-(--accent-secondary)",
+  out_for_delivery: "bg-(--accent)/20 text-(--accent-secondary)",
+  delivered: "bg-(--success) text-(--surface)",
   rto: "bg-(--danger)/15 text-(--danger)",
   cancelled: "bg-(--danger)/15 text-(--danger)",
 };
