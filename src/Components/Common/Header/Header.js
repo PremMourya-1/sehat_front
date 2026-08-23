@@ -8,6 +8,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useDispatch, useSelector } from "react-redux";
 import toast from "react-hot-toast";
 import {
+  FiAlertTriangle,
   FiMenu,
   FiShoppingBag,
   FiUser,
@@ -58,6 +59,17 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-(--border-color) bg-(--surface)/90 backdrop-blur">
+      {/* Temporary — remove this bar once checkout/payment maintenance work
+          is done (see MaintenanceWarningModal, same reason). Shown on every
+          screen size, unlike the bar below, since most traffic is mobile. */}
+      <div className="flex items-center justify-center gap-2 bg-(--danger) px-4 py-2 text-center text-xs font-medium text-white sm:text-sm">
+        <FiAlertTriangle size={14} className="shrink-0" />
+        <span>
+          Maintenance in progress — please avoid Prepaid orders right now (money may be deducted without
+          the order going through). Cash on Delivery is safe to use.
+        </span>
+      </div>
+
       <div className="hidden bg-(--btn-primary) py-1.5 text-center text-xs tracking-wide text-(--surface)/90 sm:block">
         100% Natural &amp; FSSAI Certified &middot; Free Shipping on Prepaid Orders
       </div>

@@ -5,6 +5,7 @@ import AuthSessionProvider from "@/Providers/AuthSessionProvider";
 import Header from "@/Components/Common/Header/Header";
 import Footer from "@/Components/Common/Footer/Footer";
 import AuthModal from "@/Components/Auth/AuthModal";
+import MaintenanceWarningModal from "@/Components/Common/MaintenanceWarningModal";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -46,6 +47,7 @@ export default function RootLayout({ children }) {
             <main className="min-h-screen">{children}</main>
             <Footer />
             <AuthModal />
+            <MaintenanceWarningModal />
             <Toaster
               position="top-center"
               toastOptions={{
