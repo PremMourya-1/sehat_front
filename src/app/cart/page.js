@@ -7,9 +7,11 @@ import { useSession } from "next-auth/react";
 import { useDispatch, useSelector } from "react-redux";
 import { FiMinus, FiPlus, FiShoppingBag, FiShield, FiTrash2 } from "react-icons/fi";
 import {
+  removeCombo,
   removeFromCart,
   selectCartItems,
   selectCartSubtotal,
+  updateComboQuantity,
   updateQuantity,
 } from "@/Store/Slices/cartSlice";
 import { openAuthModal } from "@/Store/Slices/uiSlice";
@@ -56,96 +58,118 @@ export default function CartPage() {
 
       <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="flex flex-col gap-4 lg:col-span-2">
-          {items.map((item) => (
-            <Card
-              key={`${item.productId}-${item.variantId}`}
-              className="flex gap-4 p-4"
-            >
-              <span className="relative block h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-(--border-color) bg-(--surface-alt)">
-                <Image
-                  src={resolveImageUrl(item.image)}
-                  alt={item.name}
-                  fill
-                  sizes="80px"
-                  className="object-cover"
-                />
-              </span>
+          {items.map((item) => {
+            const isCombo = item.type === "combo";
+            const key = isCombo ? `combo-${item.comboOfferId}` : `${item.productId}-${item.variantId}`;
+            const decrement = () =>
+              dispatch(
+                isCombo
+                  ? updateComboQuantity({ comboOfferId: item.comboOfferId, quantity: Math.max(1, item.quantity - 1) })
+                  : updateQuantity({
+                      productId: item.productId,
+                      variantId: item.variantId,
+                      quantity: Math.max(1, item.quantity - 1),
+                    }),
+              );
+            const increment = () =>
+              dispatch(
+                isCombo
+                  ? updateComboQuantity({ comboOfferId: item.comboOfferId, quantity: item.quantity + 1 })
+                  : updateQuantity({ productId: item.productId, variantId: item.variantId, quantity: item.quantity + 1 }),
+              );
+            const remove = () =>
+              dispatch(
+                isCombo
+                  ? removeCombo({ comboOfferId: item.comboOfferId })
+                  : removeFromCart({ productId: item.productId, variantId: item.variantId }),
+              );
 
-              <div className="flex flex-1 flex-col justify-between gap-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <Link
-                      href={`/products/${item.productId}`}
-                      className="font-medium text-(--foreground) hover:text-(--primary)"
-                    >
-                      {item.name}
-                    </Link>
-                    <p className="text-xs text-(--secondary-text)">
-                      Weight: {item.weight}
-                    </p>
+            return (
+              <Card key={key} className="flex gap-4 p-4">
+                {isCombo ? (
+                  <div className="grid h-20 w-20 shrink-0 grid-cols-2 gap-0.5 overflow-hidden rounded-xl border border-(--border-color) bg-(--surface-alt)">
+                    {(item.items || []).slice(0, 4).map((sub, index) => (
+                      <span key={`${sub.productId}-${index}`} className="relative block overflow-hidden">
+                        <Image src={resolveImageUrl(sub.image)} alt={sub.name} fill sizes="40px" className="object-cover" />
+                      </span>
+                    ))}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      dispatch(
-                        removeFromCart({
-                          productId: item.productId,
-                          variantId: item.variantId,
-                        }),
-                      )
-                    }
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-(--danger) transition-colors hover:bg-(--danger)/10"
-                    aria-label="Remove item"
-                  >
-                    <FiTrash2 size={17} />
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center rounded-full border border-(--border-color)">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        dispatch(
-                          updateQuantity({
-                            productId: item.productId,
-                            variantId: item.variantId,
-                            quantity: Math.max(1, item.quantity - 1),
-                          }),
-                        )
-                      }
-                      className="flex h-9 w-9 items-center justify-center text-(--secondary-text) hover:text-(--foreground)"
-                      aria-label="Decrease quantity"
-                    >
-                      <FiMinus size={14} />
-                    </button>
-                    <span className="w-8 text-center text-sm font-medium">
-                      {item.quantity}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        dispatch(
-                          updateQuantity({
-                            productId: item.productId,
-                            variantId: item.variantId,
-                            quantity: item.quantity + 1,
-                          }),
-                        )
-                      }
-                      className="flex h-9 w-9 items-center justify-center text-(--secondary-text) hover:text-(--foreground)"
-                      aria-label="Increase quantity"
-                    >
-                      <FiPlus size={14} />
-                    </button>
-                  </div>
-                  <span className="font-semibold text-(--foreground)">
-                    {formatPrice(item.price * item.quantity)}
+                ) : (
+                  <span className="relative block h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-(--border-color) bg-(--surface-alt)">
+                    <Image
+                      src={resolveImageUrl(item.image)}
+                      alt={item.name}
+                      fill
+                      sizes="80px"
+                      className="object-cover"
+                    />
                   </span>
+                )}
+
+                <div className="flex flex-1 flex-col justify-between gap-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      {isCombo ? (
+                        <>
+                          <span className="font-medium text-(--foreground)">{item.title}</span>
+                          <p className="text-xs text-(--secondary-text)">
+                            Combo · {(item.items || []).length} products
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <Link
+                            href={`/products/${item.productId}`}
+                            className="font-medium text-(--foreground) hover:text-(--primary)"
+                          >
+                            {item.name}
+                          </Link>
+                          <p className="text-xs text-(--secondary-text)">
+                            Weight: {item.weight}
+                          </p>
+                        </>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={remove}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-(--danger) transition-colors hover:bg-(--danger)/10"
+                      aria-label="Remove item"
+                    >
+                      <FiTrash2 size={17} />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center rounded-full border border-(--border-color)">
+                      <button
+                        type="button"
+                        onClick={decrement}
+                        className="flex h-9 w-9 items-center justify-center text-(--secondary-text) hover:text-(--foreground)"
+                        aria-label="Decrease quantity"
+                      >
+                        <FiMinus size={14} />
+                      </button>
+                      <span className="w-8 text-center text-sm font-medium">
+                        {item.quantity}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={increment}
+                        className="flex h-9 w-9 items-center justify-center text-(--secondary-text) hover:text-(--foreground)"
+                        aria-label="Increase quantity"
+                      >
+                        <FiPlus size={14} />
+                      </button>
+                    </div>
+                    <span className="font-semibold text-(--foreground)">
+                      {formatPrice(item.price * item.quantity)}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
 
         <Card className="h-fit">

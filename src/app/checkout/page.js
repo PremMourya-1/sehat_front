@@ -25,6 +25,7 @@ import MobileVerification from "@/Components/Checkout/MobileVerification";
 import FloatingLabelInput from "@/Components/Form/FloatingLabelInput";
 import { formatPrice } from "@/Utils/utils";
 import { loadRazorpayScript } from "@/Utils/loadRazorpayScript";
+import { expandCartItems } from "@/Utils/cartExpansion";
 
 const PINCODE_REGEX = /^[0-9]{6}$/;
 const DISABLED_FIELD_CLASS = "disabled:cursor-not-allowed disabled:opacity-50";
@@ -98,7 +99,7 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (items.length === 0) return;
     checkoutApi
-      .checkCodAvailability(items.map((item) => ({ variantId: item.variantId, quantity: item.quantity })))
+      .checkCodAvailability(expandCartItems(items))
       .then((res) => setCodPolicy(res.data.action ? res.data.data : { available: false, reason: null }))
       .catch(() => setCodPolicy({ available: false, reason: null }));
   }, [items]);
@@ -331,11 +332,7 @@ export default function CheckoutPage() {
         shippingPincode: pincode,
         paymentMethod,
         couponCode: appliedCoupon?.code || undefined,
-        items: items.map((item) => ({
-          productId: item.productId,
-          variantId: item.variantId,
-          quantity: item.quantity,
-        })),
+        items: expandCartItems(items),
       };
       const res = await orderApi.create(payload);
       if (res.data.action) {
@@ -574,16 +571,27 @@ export default function CheckoutPage() {
         <Card className="h-fit">
           <h2 className="font-heading text-xl text-(--primary)">Order Summary</h2>
           <ul className="mt-4 flex flex-col gap-2 text-sm text-(--secondary-text)">
-            {items.map((item) => (
-              <li key={`${item.productId}-${item.variantId}`} className="flex justify-between">
-                <span>
-                  {item.name} ({item.weight}) &times; {item.quantity}
-                </span>
-                <span className="text-(--foreground)">
-                  {formatPrice(item.price * item.quantity)}
-                </span>
-              </li>
-            ))}
+            {items.map((item) =>
+              item.type === "combo" ? (
+                <li key={`combo-${item.comboOfferId}`} className="flex justify-between">
+                  <span>
+                    {item.title} (Combo) &times; {item.quantity}
+                  </span>
+                  <span className="text-(--foreground)">
+                    {formatPrice(item.price * item.quantity)}
+                  </span>
+                </li>
+              ) : (
+                <li key={`${item.productId}-${item.variantId}`} className="flex justify-between">
+                  <span>
+                    {item.name} ({item.weight}) &times; {item.quantity}
+                  </span>
+                  <span className="text-(--foreground)">
+                    {formatPrice(item.price * item.quantity)}
+                  </span>
+                </li>
+              ),
+            )}
           </ul>
 
           <div className="mt-4 flex flex-col gap-2 border-t border-(--border-color) pt-4 text-sm">

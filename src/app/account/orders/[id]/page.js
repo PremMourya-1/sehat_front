@@ -229,6 +229,9 @@ export default function OrderDetailPage() {
                       {item.weight ? ` (${item.weight})` : ""}
                     </p>
                     <p className="text-xs text-(--secondary-text)">Qty: {item.quantity}</p>
+                    {item.ComboOffer && (
+                      <p className="text-xs text-(--accent-secondary)">Part of: {item.ComboOffer.title}</p>
+                    )}
                   </div>
                   <span className="text-sm font-semibold text-(--foreground)">
                     {formatPrice(item.price * item.quantity)}

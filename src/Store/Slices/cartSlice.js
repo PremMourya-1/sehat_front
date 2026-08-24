@@ -4,9 +4,13 @@ const initialState = { items: [] };
 
 // A cart line is uniquely identified by the combination of product + the
 // weight variant chosen (250g / 500g / 1kg), since each variant has its own
-// price/stock.
+// price/stock. Combo lines (see addComboToCart below) never carry a
+// top-level productId/variantId, so they never collide with this.
 const matchesLine = (item, productId, variantId) =>
   item.productId === productId && item.variantId === variantId;
+
+const matchesCombo = (item, comboOfferId) =>
+  item.type === "combo" && item.comboOfferId === comboOfferId;
 
 const cartSlice = createSlice({
   name: "cart",
@@ -58,6 +62,41 @@ const cartSlice = createSlice({
         (item) => !matchesLine(item, productId, variantId),
       );
     },
+    // A combo is cart as ONE bundle-quantity line (not N separately
+    // editable product lines) — `items` is the fixed per-bundle product
+    // breakdown (not multiplied by `quantity`); see
+    // Utils/cartExpansion.js for where that gets expanded into real
+    // productId/variantId/quantity lines at checkout time. `price` is the
+    // combo's total comboPrice, so selectCartSubtotal below needs no
+    // combo-specific branch — quantity * price already means
+    // instanceCount * comboPrice.
+    addComboToCart(state, action) {
+      const { comboOfferId, title, image, discountLabel, price, items, quantity } = action.payload;
+      const existing = state.items.find((item) => matchesCombo(item, comboOfferId));
+      if (existing) {
+        existing.quantity += quantity || 1;
+      } else {
+        state.items.push({
+          type: "combo",
+          comboOfferId,
+          title,
+          image,
+          discountLabel,
+          price,
+          items,
+          quantity: quantity || 1,
+        });
+      }
+    },
+    updateComboQuantity(state, action) {
+      const { comboOfferId, quantity } = action.payload;
+      const item = state.items.find((item) => matchesCombo(item, comboOfferId));
+      if (item) item.quantity = Math.max(1, quantity);
+    },
+    removeCombo(state, action) {
+      const { comboOfferId } = action.payload;
+      state.items = state.items.filter((item) => !matchesCombo(item, comboOfferId));
+    },
     clearCart(state) {
       state.items = [];
     },
@@ -71,6 +110,9 @@ export const {
   addToCart,
   updateQuantity,
   removeFromCart,
+  addComboToCart,
+  updateComboQuantity,
+  removeCombo,
   clearCart,
   setCartItems,
 } = cartSlice.actions;
