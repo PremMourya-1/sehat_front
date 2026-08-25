@@ -78,6 +78,10 @@ export const homeUrl = {
   get: "/home",
 };
 
+export const mixUrl = {
+  get: "/mix-ingredients",
+};
+
 export const blogUrl = {
   list: "/blog-posts",
   byId: (id) => `/blog-posts/${id}`,

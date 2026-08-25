@@ -98,8 +98,9 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (items.length === 0) return;
+    const { items: expandedItems, customMixes } = expandCartItems(items);
     checkoutApi
-      .checkCodAvailability(expandCartItems(items))
+      .checkCodAvailability(expandedItems, customMixes)
       .then((res) => setCodPolicy(res.data.action ? res.data.data : { available: false, reason: null }))
       .catch(() => setCodPolicy({ available: false, reason: null }));
   }, [items]);
@@ -327,12 +328,14 @@ export default function CheckoutPage() {
 
     setPlacingOrder(true);
     try {
+      const { items: expandedItems, customMixes } = expandCartItems(items);
       const payload = {
         ...shipping,
         shippingPincode: pincode,
         paymentMethod,
         couponCode: appliedCoupon?.code || undefined,
-        items: expandCartItems(items),
+        items: expandedItems,
+        customMixes,
       };
       const res = await orderApi.create(payload);
       if (res.data.action) {
@@ -571,17 +574,32 @@ export default function CheckoutPage() {
         <Card className="h-fit">
           <h2 className="font-heading text-xl text-(--primary)">Order Summary</h2>
           <ul className="mt-4 flex flex-col gap-2 text-sm text-(--secondary-text)">
-            {items.map((item) =>
-              item.type === "combo" ? (
-                <li key={`combo-${item.comboOfferId}`} className="flex justify-between">
-                  <span>
-                    {item.title} (Combo) &times; {item.quantity}
-                  </span>
-                  <span className="text-(--foreground)">
-                    {formatPrice(item.price * item.quantity)}
-                  </span>
-                </li>
-              ) : (
+            {items.map((item) => {
+              if (item.type === "combo") {
+                return (
+                  <li key={`combo-${item.comboOfferId}`} className="flex justify-between">
+                    <span>
+                      {item.title} (Combo) &times; {item.quantity}
+                    </span>
+                    <span className="text-(--foreground)">
+                      {formatPrice(item.price * item.quantity)}
+                    </span>
+                  </li>
+                );
+              }
+              if (item.type === "mix") {
+                return (
+                  <li key={`mix-${item.mixId}`} className="flex justify-between">
+                    <span>
+                      {item.name || "Custom Mix"} ({item.totalWeightGrams}g) &times; {item.quantity}
+                    </span>
+                    <span className="text-(--foreground)">
+                      {formatPrice(item.price * item.quantity)}
+                    </span>
+                  </li>
+                );
+              }
+              return (
                 <li key={`${item.productId}-${item.variantId}`} className="flex justify-between">
                   <span>
                     {item.name} ({item.weight}) &times; {item.quantity}
@@ -590,8 +608,8 @@ export default function CheckoutPage() {
                     {formatPrice(item.price * item.quantity)}
                   </span>
                 </li>
-              ),
-            )}
+              );
+            })}
           </ul>
 
           <div className="mt-4 flex flex-col gap-2 border-t border-(--border-color) pt-4 text-sm">

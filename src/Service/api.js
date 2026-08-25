@@ -10,6 +10,7 @@ import {
   faqUrl,
   heroBannerUrl,
   homeUrl,
+  mixUrl,
   mobileUrl,
   newsletterUrl,
   orderUrl,
@@ -89,7 +90,7 @@ export const orderApi = {
 export const checkoutApi = {
   getConfig: () => apiJson.get(checkoutUrl.config),
   checkPincode: (pincode) => apiJson.get(checkoutUrl.checkPincode, { params: { pincode } }),
-  checkCodAvailability: (items) => apiJson.post(checkoutUrl.codAvailability, { items }),
+  checkCodAvailability: (items, customMixes) => apiJson.post(checkoutUrl.codAvailability, { items, customMixes }),
   verifyPayment: (data) => apiJson.post(checkoutUrl.verifyPayment, data),
 };
 
@@ -117,6 +118,12 @@ export const cmsApi = {
 // admin-managed homepage section in one response)
 export const homeApi = {
   get: () => apiJson.get(homeUrl.get),
+};
+
+// Build Your Own Mix — ingredient catalog + admin-configured weight
+// increments/cap, in one call (see mixController.js)
+export const mixApi = {
+  getIngredients: () => apiJson.get(mixUrl.get),
 };
 
 // Blog

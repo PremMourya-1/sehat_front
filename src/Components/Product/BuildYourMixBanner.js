@@ -50,7 +50,7 @@ export default function BuildYourMixBanner() {
             Choose a base of nuts or seeds, pick your favorite ingredients,
             select a pack size, and we'll pack it fresh — just for you.
           </p>
-          <Button url="/products" variant="accent" size="lg" className="mt-6">
+          <Button url="/build-your-own-mix" variant="accent" size="lg" className="mt-6">
             Start Building
           </Button>
         </div>

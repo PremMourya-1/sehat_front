@@ -232,6 +232,11 @@ export default function OrderDetailPage() {
                     {item.ComboOffer && (
                       <p className="text-xs text-(--accent-secondary)">Part of: {item.ComboOffer.title}</p>
                     )}
+                    {item.customMixId && (
+                      <p className="text-xs text-(--accent-secondary)">
+                        Part of mix: {item.customMixName || "Custom Mix"}
+                      </p>
+                    )}
                   </div>
                   <span className="text-sm font-semibold text-(--foreground)">
                     {formatPrice(item.price * item.quantity)}

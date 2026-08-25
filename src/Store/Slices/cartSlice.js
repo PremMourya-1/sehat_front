@@ -12,6 +12,8 @@ const matchesLine = (item, productId, variantId) =>
 const matchesCombo = (item, comboOfferId) =>
   item.type === "combo" && item.comboOfferId === comboOfferId;
 
+const matchesMix = (item, mixId) => item.type === "mix" && item.mixId === mixId;
+
 const cartSlice = createSlice({
   name: "cart",
   initialState,
@@ -97,6 +99,40 @@ const cartSlice = createSlice({
       const { comboOfferId } = action.payload;
       state.items = state.items.filter((item) => !matchesCombo(item, comboOfferId));
     },
+    // A Build Your Own Mix instance, same "one bundle-quantity line" shape
+    // as a combo — `items` is the fixed per-bundle ingredient breakdown
+    // (grams, not multiplied by `quantity`), expanded at checkout time by
+    // Utils/cartExpansion.js into the `customMixes` array
+    // POST /api/orders expects. `mixId` is generated client-side (in the
+    // builder page) purely so two separate mixes never merge into one
+    // cart line just because they happen to share ingredients — unlike a
+    // combo, a mix has no admin-authored id to key on instead.
+    addMixToCart(state, action) {
+      const { mixId, name, totalWeightGrams, price, items, quantity } = action.payload;
+      const existing = state.items.find((item) => matchesMix(item, mixId));
+      if (existing) {
+        existing.quantity += quantity || 1;
+      } else {
+        state.items.push({
+          type: "mix",
+          mixId,
+          name,
+          totalWeightGrams,
+          price,
+          items,
+          quantity: quantity || 1,
+        });
+      }
+    },
+    updateMixQuantity(state, action) {
+      const { mixId, quantity } = action.payload;
+      const item = state.items.find((item) => matchesMix(item, mixId));
+      if (item) item.quantity = Math.max(1, quantity);
+    },
+    removeMix(state, action) {
+      const { mixId } = action.payload;
+      state.items = state.items.filter((item) => !matchesMix(item, mixId));
+    },
     clearCart(state) {
       state.items = [];
     },
@@ -113,6 +149,9 @@ export const {
   addComboToCart,
   updateComboQuantity,
   removeCombo,
+  addMixToCart,
+  updateMixQuantity,
+  removeMix,
   clearCart,
   setCartItems,
 } = cartSlice.actions;

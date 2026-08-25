@@ -9,9 +9,11 @@ import { FiMinus, FiPlus, FiShoppingBag, FiShield, FiTrash2 } from "react-icons/
 import {
   removeCombo,
   removeFromCart,
+  removeMix,
   selectCartItems,
   selectCartSubtotal,
   updateComboQuantity,
+  updateMixQuantity,
   updateQuantity,
 } from "@/Store/Slices/cartSlice";
 import { openAuthModal } from "@/Store/Slices/uiSlice";
@@ -60,33 +62,45 @@ export default function CartPage() {
         <div className="flex flex-col gap-4 lg:col-span-2">
           {items.map((item) => {
             const isCombo = item.type === "combo";
-            const key = isCombo ? `combo-${item.comboOfferId}` : `${item.productId}-${item.variantId}`;
+            const isMix = item.type === "mix";
+            const isBundle = isCombo || isMix;
+            const key = isCombo
+              ? `combo-${item.comboOfferId}`
+              : isMix
+                ? `mix-${item.mixId}`
+                : `${item.productId}-${item.variantId}`;
             const decrement = () =>
               dispatch(
                 isCombo
                   ? updateComboQuantity({ comboOfferId: item.comboOfferId, quantity: Math.max(1, item.quantity - 1) })
-                  : updateQuantity({
-                      productId: item.productId,
-                      variantId: item.variantId,
-                      quantity: Math.max(1, item.quantity - 1),
-                    }),
+                  : isMix
+                    ? updateMixQuantity({ mixId: item.mixId, quantity: Math.max(1, item.quantity - 1) })
+                    : updateQuantity({
+                        productId: item.productId,
+                        variantId: item.variantId,
+                        quantity: Math.max(1, item.quantity - 1),
+                      }),
               );
             const increment = () =>
               dispatch(
                 isCombo
                   ? updateComboQuantity({ comboOfferId: item.comboOfferId, quantity: item.quantity + 1 })
-                  : updateQuantity({ productId: item.productId, variantId: item.variantId, quantity: item.quantity + 1 }),
+                  : isMix
+                    ? updateMixQuantity({ mixId: item.mixId, quantity: item.quantity + 1 })
+                    : updateQuantity({ productId: item.productId, variantId: item.variantId, quantity: item.quantity + 1 }),
               );
             const remove = () =>
               dispatch(
                 isCombo
                   ? removeCombo({ comboOfferId: item.comboOfferId })
-                  : removeFromCart({ productId: item.productId, variantId: item.variantId }),
+                  : isMix
+                    ? removeMix({ mixId: item.mixId })
+                    : removeFromCart({ productId: item.productId, variantId: item.variantId }),
               );
 
             return (
               <Card key={key} className="flex gap-4 p-4">
-                {isCombo ? (
+                {isBundle ? (
                   <div className="grid h-20 w-20 shrink-0 grid-cols-2 gap-0.5 overflow-hidden rounded-xl border border-(--border-color) bg-(--surface-alt)">
                     {(item.items || []).slice(0, 4).map((sub, index) => (
                       <span key={`${sub.productId}-${index}`} className="relative block overflow-hidden">
@@ -114,6 +128,13 @@ export default function CartPage() {
                           <span className="font-medium text-(--foreground)">{item.title}</span>
                           <p className="text-xs text-(--secondary-text)">
                             Combo · {(item.items || []).length} products
+                          </p>
+                        </>
+                      ) : isMix ? (
+                        <>
+                          <span className="font-medium text-(--foreground)">{item.name || "Custom Mix"}</span>
+                          <p className="text-xs text-(--secondary-text)">
+                            Your Mix · {item.totalWeightGrams}g
                           </p>
                         </>
                       ) : (
