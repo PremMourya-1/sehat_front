@@ -38,22 +38,37 @@ export default function BuildYourOwnMixPage() {
 
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [step, setStep] = useState(1);
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [mixItems, setMixItems] = useState([]);
   const [mixName, setMixName] = useState("");
   const [justAddedToCart, setJustAddedToCart] = useState(false);
 
-  useEffect(() => {
+  const loadIngredients = () => {
+    setIsLoading(true);
+    setLoadError(false);
     mixApi
       .getIngredients()
       .then((res) => {
         if (res.data.action) setData(res.data.data);
-        else toast.error(res.data.message);
+        else {
+          toast.error(res.data.message);
+          setLoadError(true);
+        }
       })
-      .catch(() => toast.error("Failed to load mix ingredients"))
+      .catch(() => {
+        toast.error("Failed to load mix ingredients");
+        setLoadError(true);
+      })
       .finally(() => setIsLoading(false));
-  }, []);
+  };
+
+  // A failed fetch (backend down, network blip) is not the same situation
+  // as "loaded fine, nothing is flagged yet" — the two used to share one
+  // "Coming Soon" message, which reads as "this feature doesn't exist"
+  // when it's actually just a transient error worth retrying.
+  useEffect(loadIngredients, []);
 
   const totalGrams = useMemo(() => mixItems.reduce((sum, i) => sum + i.grams, 0), [mixItems]);
   const totalPrice = useMemo(() => mixItems.reduce((sum, i) => sum + i.price, 0), [mixItems]);
@@ -131,6 +146,19 @@ export default function BuildYourOwnMixPage() {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <Loader />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="mx-auto flex max-w-xl flex-col items-center gap-4 px-4 py-24 text-center">
+        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-(--danger)/10 text-(--danger)">
+          <FiPackage size={26} />
+        </span>
+        <h1 className="font-heading text-2xl text-(--primary)">Couldn&apos;t load mix ingredients</h1>
+        <p className="text-(--secondary-text)">Something went wrong on our end — please try again.</p>
+        <Button onClick={loadIngredients}>Retry</Button>
       </div>
     );
   }

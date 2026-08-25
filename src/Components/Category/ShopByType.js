@@ -22,12 +22,12 @@ export default function ShopByType({ categories = [] }) {
           subtitle="Find exactly what you're looking for"
         />
 
-        <div className="mt-10 flex flex-wrap justify-center gap-4 sm:gap-6">
+        <div className="mt-10 grid justify-center grid-cols-6 max-md:grid-cols-4 max-sm:grid-cols-2 gap-4 sm:gap-6">
           {categories.map((category) => (
             <Link
               key={category.id}
               href={`/category/${category.id}`}
-              className="group flex w-[calc(50%-0.5rem)] flex-none flex-col overflow-hidden rounded-xl border border-(--border-color) bg-(--surface) shadow-sm transition-all duration-300 hover:border-(--primary)/50 hover:shadow-md sm:w-[calc(50%-0.75rem)] lg:w-[calc(25%-1.125rem)]"
+              className="group flex flex-none flex-col overflow-hidden rounded-xl border border-(--border-color) bg-(--surface) shadow-sm transition-all duration-300 hover:border-(--primary)/50 hover:shadow-md "
             >
               <span className="relative block aspect-square w-full overflow-hidden bg-(--surface-alt)">
                 <Image
