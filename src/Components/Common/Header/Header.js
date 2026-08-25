@@ -21,6 +21,7 @@ import { selectCartCount } from "@/Store/Slices/cartSlice";
 import { openAuthModal } from "@/Store/Slices/uiSlice";
 import { BRAND_NAME } from "@/Constant/Constant";
 import logo from "@/assets/logo.png";
+import HeaderSearch from "./HeaderSearch";
 
 export default function Header() {
   const dispatch = useDispatch();
@@ -65,12 +66,14 @@ export default function Header() {
       <div className="flex items-center justify-center gap-2 bg-(--danger) px-4 py-2 text-center text-xs font-medium text-white sm:text-sm">
         <FiAlertTriangle size={14} className="shrink-0" />
         <span>
-          Maintenance in progress — please do not place any order right now, including Cash on Delivery.
+          Maintenance in progress — please do not place any order right now,
+          including Cash on Delivery.
         </span>
       </div>
 
       <div className="hidden bg-(--btn-primary) py-1.5 text-center text-xs tracking-wide text-(--surface)/90 sm:block">
-        100% Natural &amp; FSSAI Certified &middot; Free Shipping on Prepaid Orders
+        100% Natural &amp; FSSAI Certified &middot; Free Shipping on Prepaid
+        Orders
       </div>
 
       <div className="relative mx-auto flex max-w-7xl items-center justify-between px-8 py-3 max-md:px-4">
@@ -78,7 +81,7 @@ export default function Header() {
           <Image
             src={logo}
             alt={BRAND_NAME}
-            className="w-[100px] h-auto object-contain  max-md:w-[80px]"
+            className="h-auto w-[120px] object-contain max-md:w-[96px]"
             priority
           />
         </Link>
@@ -103,6 +106,8 @@ export default function Header() {
         </nav>
 
         <div className="flex items-center gap-4">
+          <HeaderSearch />
+
           <Link
             href="/cart"
             className="relative text-(--foreground) hover:text-(--primary)"
