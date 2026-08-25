@@ -17,7 +17,6 @@ import IngredientCard from "@/Components/MixBuilder/IngredientCard";
 import MixSummaryPanel from "@/Components/MixBuilder/MixSummaryPanel";
 import MixSummaryMobileBar from "@/Components/MixBuilder/MixSummaryMobileBar";
 import { formatPrice, resolveImageUrl } from "@/Utils/utils";
-import { getPerGramRate } from "@/Utils/mixPricing";
 
 const CATEGORY_LABELS = {
   nuts: "Nuts",
@@ -82,35 +81,30 @@ export default function BuildYourOwnMixPage() {
     return data.ingredients.filter((i) => i.mixCategory === categoryFilter);
   }, [data, categoryFilter]);
 
+  // Every "Add" is its own line, even for an ingredient already in the mix
+  // at a different (or the same) weight — e.g. adding Almonds at 100g then
+  // again at 250g shows as two separate 100g/250g rows, each independently
+  // removable, rather than silently merging into one 350g row.
   const addIngredient = (ingredient, grams, perGramRate) => {
     if (grams > remainingGrams) {
       toast.error(`Only ${remainingGrams}g left in your mix`);
       return;
     }
-    setMixItems((prev) => {
-      const existing = prev.find((i) => i.productId === ingredient.id);
-      if (existing) {
-        return prev.map((i) =>
-          i.productId === ingredient.id
-            ? { ...i, grams: i.grams + grams, price: Number((i.price + perGramRate * grams).toFixed(2)) }
-            : i,
-        );
-      }
-      return [
-        ...prev,
-        {
-          productId: ingredient.id,
-          name: ingredient.name,
-          image: ingredient.image,
-          grams,
-          price: Number((perGramRate * grams).toFixed(2)),
-        },
-      ];
-    });
+    setMixItems((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        productId: ingredient.id,
+        name: ingredient.name,
+        image: ingredient.image,
+        grams,
+        price: Number((perGramRate * grams).toFixed(2)),
+      },
+    ]);
   };
 
-  const removeIngredient = (productId) => {
-    setMixItems((prev) => prev.filter((i) => i.productId !== productId));
+  const removeIngredient = (lineId) => {
+    setMixItems((prev) => prev.filter((i) => i.id !== lineId));
   };
 
   const handleAddToCart = () => {
@@ -131,7 +125,7 @@ export default function BuildYourOwnMixPage() {
     );
     toast.success(`${mixName.trim() || "Your mix"} added to cart`);
     setJustAddedToCart(true);
-    setStep(4);
+    setStep(3);
   };
 
   const startOver = () => {
@@ -198,49 +192,7 @@ export default function BuildYourOwnMixPage() {
       <div className="mt-10">
         <AnimatePresence mode="wait">
           {step === 1 && (
-            <motion.div key="step1" {...fadeStep}>
-              <h2 className="text-center font-heading text-xl text-(--foreground)">Choose your base</h2>
-              <p className="mt-1 text-center text-sm text-(--secondary-text)">
-                Pick a category to start with, or browse everything.
-              </p>
-
-              <div className="mx-auto mt-8 grid max-w-2xl grid-cols-2 gap-4 sm:grid-cols-1">
-                {categoriesWithCounts.map((cat) => (
-                  <button
-                    key={cat.value}
-                    type="button"
-                    disabled={cat.count === 0}
-                    onClick={() => {
-                      setCategoryFilter(cat.value);
-                      setStep(2);
-                    }}
-                    className="group flex flex-col items-start gap-1 rounded-2xl border border-(--border-color) bg-(--surface) p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-(--btn-primary) hover:shadow-md disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0"
-                  >
-                    <span className="font-heading text-lg text-(--foreground) group-hover:text-(--primary)">
-                      {cat.label}
-                    </span>
-                    <span className="text-xs text-(--secondary-text)">{cat.count} ingredients</span>
-                  </button>
-                ))}
-              </div>
-
-              <div className="mt-6 text-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCategoryFilter("all");
-                    setStep(2);
-                  }}
-                  className="text-sm font-medium text-(--primary) underline"
-                >
-                  Or browse all ingredients
-                </button>
-              </div>
-            </motion.div>
-          )}
-
-          {step === 2 && (
-            <motion.div key="step2" {...fadeStep} className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_320px]">
+            <motion.div key="step1" {...fadeStep} className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_320px]">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <button
@@ -282,18 +234,11 @@ export default function BuildYourOwnMixPage() {
                   ))}
                 </div>
 
-                <div className="mt-8 flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={() => setStep(1)}
-                    className="flex items-center gap-1.5 text-sm font-medium text-(--secondary-text) hover:text-(--foreground)"
-                  >
-                    <FiArrowLeft size={15} /> Back
-                  </button>
+                <div className="mt-8 flex items-center justify-end">
                   <Button
                     variant="primary"
                     size="md"
-                    onClick={() => setStep(3)}
+                    onClick={() => setStep(2)}
                     disabled={mixItems.length === 0}
                   >
                     Review Your Mix
@@ -311,7 +256,7 @@ export default function BuildYourOwnMixPage() {
                     totalPrice={totalPrice}
                     onRemove={removeIngredient}
                     primaryLabel="Review Your Mix"
-                    onPrimaryAction={() => setStep(3)}
+                    onPrimaryAction={() => setStep(2)}
                     primaryDisabled={mixItems.length === 0}
                   />
                 </div>
@@ -324,14 +269,14 @@ export default function BuildYourOwnMixPage() {
                 totalPrice={totalPrice}
                 onRemove={removeIngredient}
                 primaryLabel="Review Your Mix"
-                onPrimaryAction={() => setStep(3)}
+                onPrimaryAction={() => setStep(2)}
                 primaryDisabled={mixItems.length === 0}
               />
             </motion.div>
           )}
 
-          {step === 3 && (
-            <motion.div key="step3" {...fadeStep} className="mx-auto max-w-xl">
+          {step === 2 && (
+            <motion.div key="step2" {...fadeStep} className="mx-auto max-w-xl">
               <h2 className="text-center font-heading text-xl text-(--foreground)">Review your pack</h2>
 
               <div className="mt-6">
@@ -351,7 +296,7 @@ export default function BuildYourOwnMixPage() {
               <ul className="mt-6 flex flex-col gap-3">
                 {mixItems.map((item) => (
                   <li
-                    key={item.productId}
+                    key={item.id}
                     className="flex items-center gap-3 rounded-xl border border-(--border-color) p-3"
                   >
                     <span className="relative block h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-(--surface-alt)">
@@ -380,7 +325,7 @@ export default function BuildYourOwnMixPage() {
               <div className="mt-8 flex items-center justify-between">
                 <button
                   type="button"
-                  onClick={() => setStep(2)}
+                  onClick={() => setStep(1)}
                   className="flex items-center gap-1.5 text-sm font-medium text-(--secondary-text) hover:text-(--foreground)"
                 >
                   <FiArrowLeft size={15} /> Back
@@ -392,8 +337,8 @@ export default function BuildYourOwnMixPage() {
             </motion.div>
           )}
 
-          {step === 4 && justAddedToCart && (
-            <motion.div key="step4" {...fadeStep} className="mx-auto flex max-w-md flex-col items-center gap-4 text-center">
+          {step === 3 && justAddedToCart && (
+            <motion.div key="step3" {...fadeStep} className="mx-auto flex max-w-md flex-col items-center gap-4 text-center">
               <motion.span
                 initial={{ scale: 0.6, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}

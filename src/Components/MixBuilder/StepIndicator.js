@@ -4,13 +4,12 @@ import { motion } from "framer-motion";
 import { FiCheck } from "react-icons/fi";
 
 const STEPS = [
-  { step: 1, label: "Choose Base" },
-  { step: 2, label: "Pick Ingredients" },
-  { step: 3, label: "Review" },
-  { step: 4, label: "Add to Cart" },
+  { step: 1, label: "Pick Ingredients" },
+  { step: 2, label: "Review" },
+  { step: 3, label: "Add to Cart" },
 ];
 
-// Horizontal 4-step progress bar — same rounded-pill/step-circle visual
+// Horizontal 3-step progress bar — same rounded-pill/step-circle visual
 // language as Account/OrderStatusStepper.js (that one's vertical, for order
 // history), reused here as a horizontal top-of-page indicator.
 export default function StepIndicator({ currentStep }) {

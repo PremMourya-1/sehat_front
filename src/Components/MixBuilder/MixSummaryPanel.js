@@ -50,7 +50,7 @@ export default function MixSummaryPanel({
         <ul className="flex max-h-64 flex-col gap-2 overflow-y-auto pr-1">
           {items.map((item) => (
             <motion.li
-              key={item.productId}
+              key={item.id}
               layout
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -68,7 +68,7 @@ export default function MixSummaryPanel({
               </div>
               <button
                 type="button"
-                onClick={() => onRemove(item.productId)}
+                onClick={() => onRemove(item.id)}
                 aria-label={`Remove ${item.name}`}
                 className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-(--secondary-text) transition-colors hover:bg-(--danger)/10 hover:text-(--danger)"
               >
