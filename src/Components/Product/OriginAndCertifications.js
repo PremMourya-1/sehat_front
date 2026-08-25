@@ -1,4 +1,5 @@
 import { FiMapPin, FiShield } from "react-icons/fi";
+import { FSSAI_LICENSE_NUMBER } from "@/Constant/Constant";
 
 const FALLBACK_CERTIFICATIONS = ["FSSAI"];
 
@@ -28,6 +29,9 @@ export default function OriginAndCertifications({ product }) {
               className="flex items-center gap-1 rounded-full border border-(--border-color) bg-(--surface) px-2.5 py-1 text-xs font-medium text-(--secondary-text)"
             >
               <FiShield size={11} className="text-(--success)" /> {cert} Certified
+              {cert === "FSSAI" && (
+                <span className="text-(--secondary-text)/70">· Lic. No. {FSSAI_LICENSE_NUMBER}</span>
+              )}
             </span>
           ))}
         </div>

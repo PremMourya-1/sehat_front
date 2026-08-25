@@ -6,6 +6,11 @@ export const BRAND_NAME = "Sehat Potli";
 export const BRAND_TAGLINE = "Sehat Ki Potli, Har Ghar Ki Zaroorat";
 export const BRAND_TAGLINE_SHORT = "Pure. Natural. Wholesome.";
 
+// One FSSAI license covers the whole business (Food Business Operator), not
+// per-product — shown alongside every "FSSAI Certified" badge, e.g.
+// Components/Product/OriginAndCertifications.js.
+export const FSSAI_LICENSE_NUMBER = "22226067006344";
+
 export const WEIGHT_OPTIONS = ["250g", "500g", "1kg"];
 
 export const PRODUCT_TAGS = [
