@@ -3,6 +3,7 @@ import { Toaster } from "react-hot-toast";
 import StoreProvider from "@/Store/StoreProvider";
 import AuthSessionProvider from "@/Providers/AuthSessionProvider";
 import Header from "@/Components/Common/Header/Header";
+import MobileBottomNav from "@/Components/Common/Header/MobileBottomNav";
 import Footer from "@/Components/Common/Footer/Footer";
 import AuthModal from "@/Components/Auth/AuthModal";
 import MaintenanceWarningModal from "@/Components/Common/MaintenanceWarningModal";
@@ -44,8 +45,9 @@ export default function RootLayout({ children }) {
         <AuthSessionProvider>
           <StoreProvider>
             <Header />
-            <main className="min-h-screen">{children}</main>
+            <main className="min-h-screen pb-24 md:pb-0">{children}</main>
             <Footer />
+            <MobileBottomNav />
             <AuthModal />
             <MaintenanceWarningModal />
             <Toaster

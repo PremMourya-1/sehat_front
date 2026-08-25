@@ -179,7 +179,7 @@ export default function BuildYourOwnMixPage() {
   }));
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 pb-28 sm:pb-8 md:px-8">
+    <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
       <div className="text-center">
         <p className="font-accent text-lg text-(--accent-secondary)">Make it yours</p>
         <h1 className="mt-1 font-heading text-3xl text-(--primary) max-md:text-2xl">Build Your Own Mix</h1>

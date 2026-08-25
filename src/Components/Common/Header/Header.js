@@ -110,7 +110,7 @@ export default function Header() {
 
           <Link
             href="/cart"
-            className="relative text-(--foreground) hover:text-(--primary)"
+            className="relative text-(--foreground) hover:text-(--primary) max-md:hidden"
             aria-label="Cart"
           >
             <FiShoppingBag size={22} />
