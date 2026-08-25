@@ -82,6 +82,10 @@ export const mixUrl = {
   get: "/mix-ingredients",
 };
 
+export const cartRewardUrl = {
+  get: "/cart-reward-tiers",
+};
+
 export const blogUrl = {
   list: "/blog-posts",
   byId: (id) => `/blog-posts/${id}`,

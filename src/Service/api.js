@@ -2,6 +2,7 @@ import { apiJson, apiMultipart } from "@/Service/service";
 import {
   authUrl,
   blogUrl,
+  cartRewardUrl,
   cartUrl,
   categoryUrl,
   checkoutUrl,
@@ -124,6 +125,15 @@ export const homeApi = {
 // increments/cap, in one call (see mixController.js)
 export const mixApi = {
   getIngredients: () => apiJson.get(mixUrl.get),
+};
+
+// "Spend ₹X, get a free gift" tiers — powers the cart fill progress bar
+// (see Components/Cart/CartRewardProgress.js). Public, no auth — the same
+// tiers the server independently re-derives and auto-applies at checkout
+// (see calculateSubtotal.js's calculateRewardLines), this call is display
+// only.
+export const cartRewardApi = {
+  getTiers: () => apiJson.get(cartRewardUrl.get),
 };
 
 // Blog

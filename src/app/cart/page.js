@@ -19,6 +19,7 @@ import {
 import { openAuthModal } from "@/Store/Slices/uiSlice";
 import Button from "@/Components/Button/Button";
 import Card from "@/Components/Card/Card";
+import CartFillProgress from "@/Components/Cart/CartFillProgress";
 import { formatPrice, resolveImageUrl } from "@/Utils/utils";
 
 export default function CartPage() {
@@ -57,6 +58,10 @@ export default function CartPage() {
       <p className="mt-1 text-sm text-(--secondary-text)">
         {items.length} item{items.length === 1 ? "" : "s"} in your cart
       </p>
+
+      <div className="mt-6">
+        <CartFillProgress variant="inline" />
+      </div>
 
       <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="flex flex-col gap-4 lg:col-span-2">
