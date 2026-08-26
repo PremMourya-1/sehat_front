@@ -58,72 +58,68 @@ export default function ComboOffers({ offers = [] }) {
         <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
           {validOffers.map((offer) => {
             const savings = (offer.individualTotal || 0) - Number(offer.comboPrice || 0);
-            const previewItems = (offer.items || []).slice(0, 4);
-            // "Almonds 250g + Cashews 250g" — lets a shopper see exactly
-            // which products and what size are in the bundle without
-            // having to squint at the collage thumbnails.
-            const itemsCaption = (offer.items || [])
-              .map((item) => `${item.Product?.name || ""}${item.variant?.weight ? ` ${item.variant.weight}` : ""}`)
-              .filter(Boolean)
-              .join(" + ");
 
             return (
               <div
                 key={offer.id}
-                className="group flex flex-col overflow-hidden rounded-2xl border border-(--border-color) bg-(--surface) shadow-sm transition-shadow hover:shadow-md"
+                className="flex flex-col rounded-2xl border border-(--border-color) bg-(--surface) p-5 shadow-sm transition-shadow hover:shadow-md"
               >
-                <div className="relative grid h-48 grid-cols-2 gap-1 bg-(--surface-alt) p-1">
-                  {previewItems.map((item, index) => (
-                    <span
-                      key={item.id || index}
-                      className="relative block overflow-hidden rounded-lg bg-(--surface-alt)"
-                    >
-                      <Image
-                        src={resolveImageUrl(item.Product?.image)}
-                        alt={item.Product?.name || offer.title}
-                        fill
-                        sizes="(max-width: 768px) 50vw, 25vw"
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                    </span>
-                  ))}
+                {offer.discountLabel && (
+                  <span className="mb-2 inline-flex w-fit items-center rounded-full bg-(--accent) px-2.5 py-1 text-xs font-semibold text-(--foreground)">
+                    {offer.discountLabel}
+                  </span>
+                )}
+                <h3 className="font-heading text-xl text-(--foreground)">{offer.title}</h3>
+                {offer.description && (
+                  <p className="mt-1 text-sm text-(--secondary-text) line-clamp-2">{offer.description}</p>
+                )}
 
-                  {offer.discountLabel && (
-                    <span className="absolute left-2 top-2 rounded-full bg-(--accent) px-2.5 py-1 text-xs font-semibold text-(--foreground) shadow-sm">
-                      {offer.discountLabel}
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex flex-1 flex-col gap-2 p-5">
-                  <h3 className="font-heading text-xl text-(--foreground)">{offer.title}</h3>
-                  {itemsCaption && (
-                    <p className="text-xs font-medium text-(--secondary-text) line-clamp-2">{itemsCaption}</p>
-                  )}
-                  {offer.description && (
-                    <p className="text-sm text-(--secondary-text) line-clamp-2">{offer.description}</p>
-                  )}
-
-                  <div className="mt-1 flex items-baseline gap-2">
-                    <span className="text-lg font-semibold text-(--foreground)">
-                      {formatPrice(offer.comboPrice)}
-                    </span>
-                    {savings > 0 && (
-                      <span className="text-sm text-(--muted) line-through">
-                        {formatPrice(offer.individualTotal)}
+                {/* Every item at the same fixed size regardless of how many
+                    are in the combo (2 or 4) — a stretching grid made a
+                    2-item combo's photos look completely different from a
+                    4-item one. Each photo carries its own name + weight ×
+                    quantity right underneath it. */}
+                <div className="mt-4 flex flex-wrap gap-3">
+                  {(offer.items || []).map((item, index) => (
+                    <div key={item.id || index} className="flex w-18 flex-col items-center gap-1 text-center">
+                      <span className="relative block h-18 w-18 overflow-hidden rounded-xl border border-(--border-color) bg-(--surface-alt)">
+                        <Image
+                          src={resolveImageUrl(item.Product?.image)}
+                          alt={item.Product?.name || ""}
+                          fill
+                          sizes="72px"
+                          className="object-cover"
+                        />
                       </span>
-                    )}
-                  </div>
-
-                  <Button
-                    size="sm"
-                    icon={FiShoppingBag}
-                    className="mt-auto w-full justify-center"
-                    onClick={() => handleAdd(offer)}
-                  >
-                    Add to Cart
-                  </Button>
+                      <p className="w-full truncate text-[11px] font-medium text-(--foreground)">
+                        {item.Product?.name}
+                      </p>
+                      <p className="text-[10px] text-(--secondary-text)">
+                        {item.variant?.weight} × {item.quantity}
+                      </p>
+                    </div>
+                  ))}
                 </div>
+
+                <div className="mt-4 flex items-baseline gap-2">
+                  <span className="text-lg font-semibold text-(--foreground)">
+                    {formatPrice(offer.comboPrice)}
+                  </span>
+                  {savings > 0 && (
+                    <span className="text-sm text-(--muted) line-through">
+                      {formatPrice(offer.individualTotal)}
+                    </span>
+                  )}
+                </div>
+
+                <Button
+                  size="sm"
+                  icon={FiShoppingBag}
+                  className="mt-3 w-full justify-center"
+                  onClick={() => handleAdd(offer)}
+                >
+                  Add to Cart
+                </Button>
               </div>
             );
           })}
