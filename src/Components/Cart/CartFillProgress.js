@@ -331,48 +331,41 @@ export default function CartFillProgress({ variant = "floating" }) {
           >
             {burst && <FullScreenConfetti pieces={burst.pieces} />}
 
-            {/* Peek tab — anchored from the BOTTOM, not the top: this
-                wrapper is a plain block, so once the card below unmounts
-                (an absolutely-positioned sibling never contributes to a
-                block's own height) the wrapper's height collapses to
-                zero and its top edge moves with it. Its bottom edge stays
-                exactly where the outer box's own `bottom-24`/`bottom-4`
-                anchor put it though, so a `bottom`-relative offset here
-                is the only one that keeps the tab visually fixed in
-                place whether the card is open or collapsed. */}
+            {/* The card below stays mounted at all times (only its own
+                transform/opacity animates when collapsing) rather than
+                unmounting via AnimatePresence — that keeps this wrapper's
+                height constant, which is what lets this badge sit at a
+                fixed top-right corner instead of drifting as the wrapper's
+                height (and thus its top edge, since the outer box is only
+                bottom-anchored) would otherwise change between states. */}
             <button
               type="button"
               onClick={() => setMinimized((m) => !m)}
               aria-label={minimized ? "Show cart progress" : "Hide cart progress"}
-              className={`absolute bottom-4 right-0 z-10 flex h-8 w-8 items-center justify-center rounded-full shadow-md ${GLASS_CLASSES}`}
+              className={`absolute -right-2 -top-2 z-20 flex h-8 w-8 items-center justify-center rounded-full shadow-md ${GLASS_CLASSES}`}
             >
               {minimized ? <FiChevronLeft size={16} /> : <FiChevronRight size={16} />}
             </button>
 
-            <AnimatePresence>
-              {!minimized && (
-                <motion.div
-                  key="card"
-                  initial={{ x: 80, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: 80, opacity: 0 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 28 }}
-                  className={`relative mr-9 overflow-hidden rounded-2xl p-3.5 shadow-xl ${GLASS_CLASSES}`}
-                >
-                  <RewardBody
-                    items={items}
-                    subtotal={subtotal}
-                    awarded={awarded}
-                    next={next}
-                    targetAmount={targetAmount}
-                    pct={pct}
-                    compact
-                    onRemoveItem={handleRemoveItem}
-                    onCheckout={goToCheckout}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <motion.div
+              animate={{ x: minimized ? "110%" : 0, opacity: minimized ? 0 : 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 28 }}
+              style={{ pointerEvents: minimized ? "none" : "auto" }}
+              aria-hidden={minimized}
+              className={`relative overflow-hidden rounded-2xl p-3.5 shadow-xl ${GLASS_CLASSES}`}
+            >
+              <RewardBody
+                items={items}
+                subtotal={subtotal}
+                awarded={awarded}
+                next={next}
+                targetAmount={targetAmount}
+                pct={pct}
+                compact
+                onRemoveItem={handleRemoveItem}
+                onCheckout={goToCheckout}
+              />
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
