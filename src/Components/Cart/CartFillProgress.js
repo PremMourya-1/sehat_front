@@ -263,7 +263,19 @@ export default function CartFillProgress({ variant = "floating" }) {
   // every re-render / quantity tweak that keeps the same awarded set — and
   // never on the very first computation (page load with an already-
   // qualifying cart shouldn't feel like a fresh celebration).
+  //
+  // Waits for `loaded` before establishing that "don't celebrate this"
+  // baseline: `tiers` starts as `[]` while the API call is in flight, so
+  // `awarded` is unconditionally empty on the component's very first
+  // render regardless of the real subtotal. Without this guard, that
+  // placeholder empty state got captured as the baseline, and the
+  // baseline never got recomputed once the real tier list arrived a beat
+  // later — so a cart that already qualified the moment real data showed
+  // up (e.g. the very first item added, if its price alone clears a low
+  // threshold) looked like a "new" crossing and fired immediately instead
+  // of only once the customer had genuinely earned it.
   useEffect(() => {
+    if (!loaded) return;
     const ids = awarded.map((t) => t.id).sort().join(",");
     if (prevAwardedIds.current === null) {
       prevAwardedIds.current = ids;
@@ -275,7 +287,7 @@ export default function CartFillProgress({ variant = "floating" }) {
       if (isNewlyAwarded) setBurst({ key: Date.now(), pieces: generateConfettiPieces() });
     }
     prevAwardedIds.current = ids;
-  }, [awarded]);
+  }, [awarded, loaded]);
 
   const suppressed = variant === "floating" && SUPPRESSED_ON.some((p) => pathname.startsWith(p));
   const visible = loaded && tiers.length > 0 && items.length > 0 && !suppressed;
