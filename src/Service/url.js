@@ -35,12 +35,18 @@ export const categoryUrl = {
   byId: (id) => `/categories/${id}`,
 };
 
+// Matches the real backend routes in routes/cartRoutes.js exactly (this
+// object previously had guessed paths — /cart/add, /cart/update,
+// /cart/remove/:id — that never matched anything live; nothing called
+// cartApi at all until the login-merge/logged-in-sync feature wired it up).
 export const cartUrl = {
   get: "/cart",
-  add: "/cart/add",
-  update: "/cart/update",
-  remove: (id) => `/cart/remove/${id}`,
-  clear: "/cart/clear",
+  add: "/cart",
+  merge: "/cart/merge",
+  sync: "/cart/sync",
+  update: (itemId) => `/cart/${itemId}`,
+  remove: (itemId) => `/cart/${itemId}`,
+  clear: "/cart",
 };
 
 export const orderUrl = {

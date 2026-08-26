@@ -64,12 +64,32 @@ export const categoryApi = {
   getById: (id) => apiJson.get(categoryUrl.byId(id)),
 };
 
-// Cart (server-persisted cart for logged-in customers)
+// Cart (server-persisted cart for logged-in customers) — see
+// Store/StoreProvider.js for when/how these actually get called: `merge`
+// once right after login (combines a guest's localStorage cart into
+// whatever's already in their DB cart), `sync` on a debounce for every
+// cart change made while already logged in. Guests never call any of
+// this — their cart is localStorage-only, see cartSlice.js.
+// merge/sync take the session's apiToken explicitly and set it as an
+// Authorization header themselves, rather than trusting the shared axios
+// instance's own interceptor (service.js, reads sessionBridge.js) to
+// already have it — StoreProvider.js fires these from its own
+// useSession()-driven effect, which can genuinely run before
+// AuthSessionProvider's separate SessionBridgeSync effect has synced the
+// bridge yet on the very same login transition. A stale/missing token
+// there means a 401, and this axios instance's response interceptor
+// hard-redirects to "/" on any 401 — worth avoiding explicitly.
+function authHeader(apiToken) {
+  return apiToken ? { headers: { Authorization: `Bearer ${apiToken}` } } : undefined;
+}
+
 export const cartApi = {
   get: () => apiJson.get(cartUrl.get),
   add: (data) => apiJson.post(cartUrl.add, data),
-  update: (data) => apiJson.put(cartUrl.update, data),
-  remove: (id) => apiJson.delete(cartUrl.remove(id)),
+  merge: (items, apiToken) => apiJson.post(cartUrl.merge, { items }, authHeader(apiToken)),
+  sync: (items, apiToken) => apiJson.put(cartUrl.sync, { items }, authHeader(apiToken)),
+  update: (itemId, quantity) => apiJson.put(cartUrl.update(itemId), { quantity }),
+  remove: (itemId) => apiJson.delete(cartUrl.remove(itemId)),
   clear: () => apiJson.delete(cartUrl.clear),
 };
 
