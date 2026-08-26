@@ -17,8 +17,13 @@ import {
 } from "@/Store/Slices/cartSlice";
 import { openAuthModal } from "@/Store/Slices/uiSlice";
 import Button from "@/Components/Button/Button";
+import useScrollVisibility from "@/Hooks/useScrollVisibility";
 import { cartRewardApi } from "@/Service/api";
 import { formatPrice, resolveImageUrl } from "@/Utils/utils";
+
+// Matches MobileBottomNav's own HIDE_AFTER_PX so both hide/reveal on
+// exactly the same scroll event, staying visually in sync.
+const NAV_HIDE_AFTER_PX = 200;
 
 // The global floating widget follows the shopper everywhere except pages
 // that already show their own richer version (the Cart page embeds
@@ -230,6 +235,7 @@ export default function CartFillProgress({ variant = "floating" }) {
   const { status } = useSession();
   const items = useSelector(selectCartItems);
   const subtotal = useSelector(selectCartSubtotal);
+  const navVisible = useScrollVisibility(NAV_HIDE_AFTER_PX);
 
   const [tiers, setTiers] = useState([]);
   const [cartRewardMode, setCartRewardMode] = useState("highest");
@@ -308,7 +314,11 @@ export default function CartFillProgress({ variant = "floating" }) {
   }
 
   return (
-    <div className="pointer-events-none fixed inset-x-4 bottom-24 z-60 md:inset-x-auto md:bottom-6 md:right-6 md:left-auto md:w-96">
+    <div
+      className={`pointer-events-none fixed inset-x-4 z-60 transition-[bottom] duration-300 ease-out md:inset-x-auto md:bottom-6 md:right-6 md:left-auto md:w-96 ${
+        navVisible ? "bottom-24" : "bottom-4"
+      }`}
+    >
       <AnimatePresence>
         {visible && (
           <motion.div

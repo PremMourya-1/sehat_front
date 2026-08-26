@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -9,6 +8,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { FiHome, FiPackage, FiShoppingBag, FiUser } from "react-icons/fi";
 import { selectCartCount } from "@/Store/Slices/cartSlice";
 import { openAuthModal } from "@/Store/Slices/uiSlice";
+import useScrollVisibility from "@/Hooks/useScrollVisibility";
 
 // Hides once the page has scrolled past this point AND the scroll direction
 // is down; any upward scroll (even 1px) brings it straight back — the
@@ -38,36 +38,9 @@ export default function MobileBottomNav() {
   const dispatch = useDispatch();
   const { status } = useSession();
   const cartCount = useSelector(selectCartCount);
-  const [visible, setVisible] = useState(true);
-  const lastScrollY = useRef(0);
+  const visible = useScrollVisibility(HIDE_AFTER_PX);
 
   const suppressed = SUPPRESSED_ON.some((path) => pathname.startsWith(path));
-
-  useEffect(() => {
-    lastScrollY.current = window.scrollY;
-    let ticking = false;
-
-    const handleScroll = () => {
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(() => {
-        const currentY = window.scrollY;
-        const scrolledUp = currentY < lastScrollY.current;
-
-        if (currentY <= HIDE_AFTER_PX) {
-          setVisible(true);
-        } else {
-          setVisible(scrolledUp);
-        }
-
-        lastScrollY.current = currentY;
-        ticking = false;
-      });
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   const isActive = (href) => {
     if (href === "/") return pathname === "/";
