@@ -7,9 +7,16 @@ import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
-import { FiGift } from "react-icons/fi";
-import { selectCartItems, selectCartSubtotal } from "@/Store/Slices/cartSlice";
+import { FiGift, FiX } from "react-icons/fi";
+import {
+  removeCombo,
+  removeFromCart,
+  removeMix,
+  selectCartItems,
+  selectCartSubtotal,
+} from "@/Store/Slices/cartSlice";
 import { openAuthModal } from "@/Store/Slices/uiSlice";
+import Button from "@/Components/Button/Button";
 import { cartRewardApi } from "@/Service/api";
 import { formatPrice, resolveImageUrl } from "@/Utils/utils";
 
@@ -18,6 +25,10 @@ import { formatPrice, resolveImageUrl } from "@/Utils/utils";
 // <CartFillProgress variant="inline" />) or have no cart context at all.
 const SUPPRESSED_ON = ["/cart", "/checkout", "/build-your-own-mix"];
 
+// Shared glass look — same frosted-pill language as MobileBottomNav, so the
+// achievement box reads as part of the same UI family as the bottom bar.
+const GLASS_CLASSES = "border border-(--border-color) bg-(--surface)/75 backdrop-blur-lg";
+
 const CONFETTI_COLORS = [
   "var(--primary)",
   "var(--accent-secondary)",
@@ -25,6 +36,19 @@ const CONFETTI_COLORS = [
   "#EF476F",
   "#06D6A0",
 ];
+
+// Human-readable description of a tier's gift — "250g Almonds", "2 × 500g
+// Cashews" — falling back to the admin's own label, then a generic phrase.
+// Shared between the "add ₹X more to unlock..." hint and the achievement
+// banner so both always describe the exact same thing.
+function describeGift(tier) {
+  if (!tier) return "a free gift";
+  const qty = tier.giftQuantity > 1 ? `${tier.giftQuantity} × ` : "";
+  const weight = tier.giftVariant?.weight ? `${tier.giftVariant.weight} ` : "";
+  const name = tier.giftProduct?.name;
+  if (name) return `${qty}${weight}${name}`;
+  return tier.label || "a free gift";
+}
 
 // Randomized per-piece trajectories, generated once per burst outside of
 // render (see the effect in CartFillProgress that produces `burst`) rather
@@ -71,20 +95,38 @@ function FullScreenConfetti({ pieces }) {
   );
 }
 
-function AvatarStack({ items }) {
+// Left-to-right avatar row of everything already in the cart — each one
+// carries its own small remove badge so a customer can drop an item right
+// from the progress widget instead of having to open the cart page first.
+function AvatarStack({ items, onRemove }) {
   const avatars = useMemo(() => {
     const list = [];
     for (const item of items) {
       if (item.type === "combo") {
-        list.push({ key: `combo-${item.comboOfferId}`, image: item.image, name: item.title });
+        list.push({
+          key: `combo-${item.comboOfferId}`,
+          image: item.image,
+          name: item.title,
+          remove: () => onRemove({ comboOfferId: item.comboOfferId }, "combo"),
+        });
       } else if (item.type === "mix") {
-        list.push({ key: `mix-${item.mixId}`, image: item.items?.[0]?.image, name: item.name || "Your Mix" });
+        list.push({
+          key: `mix-${item.mixId}`,
+          image: item.items?.[0]?.image,
+          name: item.name || "Your Mix",
+          remove: () => onRemove({ mixId: item.mixId }, "mix"),
+        });
       } else {
-        list.push({ key: `${item.productId}-${item.variantId}`, image: item.image, name: item.name });
+        list.push({
+          key: `${item.productId}-${item.variantId}`,
+          image: item.image,
+          name: item.name,
+          remove: () => onRemove({ productId: item.productId, variantId: item.variantId }, "product"),
+        });
       }
     }
     return list;
-  }, [items]);
+  }, [items, onRemove]);
 
   const shown = avatars.slice(0, 4);
   const extra = avatars.length - shown.length;
@@ -92,23 +134,66 @@ function AvatarStack({ items }) {
   return (
     <div className="flex shrink-0 items-center">
       {shown.map((a, i) => (
-        <span
-          key={a.key}
-          className="relative -ml-2.5 block h-8 w-8 overflow-hidden rounded-full border-2 border-(--surface) bg-(--surface-alt) first:ml-0"
-          style={{ zIndex: shown.length - i }}
-        >
-          {a.image ? (
-            <Image src={resolveImageUrl(a.image)} alt={a.name || ""} fill sizes="32px" className="object-cover" />
-          ) : (
-            <FiGift className="absolute inset-0 m-auto text-(--primary)" size={14} />
-          )}
+        <span key={a.key} className="relative -ml-2.5 first:ml-0" style={{ zIndex: shown.length - i }}>
+          <span className="block h-9 w-9 overflow-hidden rounded-full border-2 border-(--surface) bg-(--surface-alt)">
+            {a.image ? (
+              <Image src={resolveImageUrl(a.image)} alt={a.name || ""} fill sizes="36px" className="object-cover" />
+            ) : (
+              <FiGift className="absolute inset-0 m-auto text-(--primary)" size={14} />
+            )}
+          </span>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              a.remove();
+            }}
+            aria-label={`Remove ${a.name || "item"} from cart`}
+            className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-(--danger) text-white ring-2 ring-(--surface)"
+          >
+            <FiX size={9} />
+          </button>
         </span>
       ))}
       {extra > 0 && (
-        <span className="relative -ml-2.5 flex h-8 w-8 items-center justify-center rounded-full border-2 border-(--surface) bg-(--primary) text-[10px] font-semibold text-white">
+        <span className="relative -ml-2.5 flex h-9 w-9 items-center justify-center rounded-full border-2 border-(--surface) bg-(--primary) text-[10px] font-semibold text-white">
           +{extra}
         </span>
       )}
+    </div>
+  );
+}
+
+// A persistent "here's what you've earned" banner — stays visible the
+// whole time a gift is awarded, not just as a one-off toast, so the
+// customer always knows exactly what free item is riding along in the
+// order (see describeGift above for the exact "250g Almonds" wording).
+function AchievementBanner({ awarded, compact }) {
+  if (awarded.length === 0) return null;
+  return (
+    <div
+      className={`flex flex-col gap-2 rounded-xl border border-(--border-color) bg-(--surface)/60 p-2 backdrop-blur-md ${
+        compact ? "text-[11px]" : "text-xs"
+      }`}
+    >
+      {awarded.map((tier) => (
+        <div key={tier.id} className="flex items-center gap-2">
+          <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-(--border-color) bg-(--surface-alt)">
+            {tier.giftProduct?.image ? (
+              <Image
+                src={resolveImageUrl(tier.giftProduct.image)}
+                alt={tier.giftProduct.name || ""}
+                fill
+                sizes="32px"
+                className="object-cover"
+              />
+            ) : (
+              <FiGift className="absolute inset-0 m-auto text-(--primary)" size={14} />
+            )}
+          </span>
+          <span className="font-semibold text-(--primary)">🎉 FREE {describeGift(tier)} added to your order!</span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -188,9 +273,6 @@ export default function CartFillProgress({ variant = "floating" }) {
   const suppressed = variant === "floating" && SUPPRESSED_ON.some((p) => pathname.startsWith(p));
   const visible = loaded && tiers.length > 0 && items.length > 0 && !suppressed;
 
-  // The whole widget doubles as a "go finish this order" shortcut — tapping
-  // it jumps straight to checkout, same auth gate the Cart page's own
-  // Proceed to Checkout button uses.
   const goToCheckout = () => {
     if (status !== "authenticated") {
       dispatch(openAuthModal({ view: "login", redirectTo: "/checkout" }));
@@ -198,24 +280,17 @@ export default function CartFillProgress({ variant = "floating" }) {
     }
     router.push("/checkout");
   };
-  const handleKeyDown = (event) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      goToCheckout();
-    }
+
+  const handleRemoveItem = (payload, type) => {
+    if (type === "combo") dispatch(removeCombo(payload));
+    else if (type === "mix") dispatch(removeMix(payload));
+    else dispatch(removeFromCart(payload));
   };
 
   if (variant === "inline") {
     if (!loaded || tiers.length === 0) return null;
     return (
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={goToCheckout}
-        onKeyDown={handleKeyDown}
-        aria-label="Go to checkout"
-        className="relative cursor-pointer overflow-hidden rounded-2xl border border-(--border-color) bg-(--surface) p-5 transition-colors hover:border-(--primary)"
-      >
+      <div className={`relative overflow-hidden rounded-2xl p-5 shadow-sm ${GLASS_CLASSES}`}>
         {burst && <FullScreenConfetti pieces={burst.pieces} />}
         <RewardBody
           items={items}
@@ -225,6 +300,8 @@ export default function CartFillProgress({ variant = "floating" }) {
           targetAmount={targetAmount}
           pct={pct}
           compact={false}
+          onRemoveItem={handleRemoveItem}
+          onCheckout={goToCheckout}
         />
       </div>
     );
@@ -238,14 +315,8 @@ export default function CartFillProgress({ variant = "floating" }) {
             initial={{ y: 60, opacity: 0, scale: 0.95 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 60, opacity: 0, scale: 0.95 }}
-            whileTap={{ scale: 0.97 }}
             transition={{ type: "spring", stiffness: 300, damping: 28 }}
-            role="button"
-            tabIndex={0}
-            onClick={goToCheckout}
-            onKeyDown={handleKeyDown}
-            aria-label="Go to checkout"
-            className="pointer-events-auto relative mx-auto max-w-sm cursor-pointer overflow-hidden rounded-2xl border border-(--border-color) bg-(--surface)/95 p-3.5 shadow-xl backdrop-blur-lg md:max-w-none"
+            className={`pointer-events-auto relative mx-auto max-w-sm overflow-hidden rounded-2xl p-3.5 shadow-xl md:max-w-none ${GLASS_CLASSES}`}
           >
             {burst && <FullScreenConfetti pieces={burst.pieces} />}
             <RewardBody
@@ -256,6 +327,8 @@ export default function CartFillProgress({ variant = "floating" }) {
               targetAmount={targetAmount}
               pct={pct}
               compact
+              onRemoveItem={handleRemoveItem}
+              onCheckout={goToCheckout}
             />
           </motion.div>
         )}
@@ -264,11 +337,11 @@ export default function CartFillProgress({ variant = "floating" }) {
   );
 }
 
-function RewardBody({ items, subtotal, awarded, next, targetAmount, pct, compact }) {
+function RewardBody({ items, subtotal, awarded, next, targetAmount, pct, compact, onRemoveItem, onCheckout }) {
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex items-center justify-between gap-3">
-        <AvatarStack items={items} />
+        <AvatarStack items={items} onRemove={onRemoveItem} />
         <span className={`shrink-0 font-semibold text-(--foreground) ${compact ? "text-xs" : "text-sm"}`}>
           {formatPrice(subtotal)}
           {targetAmount > 0 && <span className="text-(--secondary-text)"> / {formatPrice(targetAmount)}</span>}
@@ -284,27 +357,28 @@ function RewardBody({ items, subtotal, awarded, next, targetAmount, pct, compact
         />
       </div>
 
-      <p className={`flex items-center gap-1.5 font-medium ${compact ? "text-[11px]" : "text-xs"}`}>
-        <FiGift className="shrink-0 text-(--primary)" size={compact ? 13 : 14} />
-        {next ? (
+      <AchievementBanner awarded={awarded} compact={compact} />
+
+      {next ? (
+        <p className={`flex items-center gap-1.5 font-medium ${compact ? "text-[11px]" : "text-xs"}`}>
+          <FiGift className="shrink-0 text-(--primary)" size={compact ? 13 : 14} />
           <span className="text-(--secondary-text)">
             Add <span className="text-(--foreground)">{formatPrice(next.minCartAmount - subtotal)}</span> more to
-            unlock{" "}
-            <span className="text-(--primary)">
-              {next.label || `a free ${next.giftProduct?.name || "gift"}`}
-            </span>
+            unlock <span className="text-(--primary)">FREE {describeGift(next)}</span>
           </span>
-        ) : awarded.length > 0 ? (
-          <span className="text-(--primary)">
-            🎉{" "}
-            {awarded.length > 1
-              ? `All rewards unlocked — ${awarded.map((t) => t.label || t.giftProduct?.name).filter(Boolean).join(", ")} added free!`
-              : `${awarded[0].label || `Free ${awarded[0].giftProduct?.name || "gift"}`} added to your order!`}
-          </span>
-        ) : (
-          <span className="text-(--secondary-text)">Add items to unlock a free gift</span>
-        )}
-      </p>
+        </p>
+      ) : (
+        awarded.length === 0 && (
+          <p className={`flex items-center gap-1.5 font-medium text-(--secondary-text) ${compact ? "text-[11px]" : "text-xs"}`}>
+            <FiGift className="shrink-0 text-(--primary)" size={compact ? 13 : 14} />
+            Add items to unlock a free gift
+          </p>
+        )
+      )}
+
+      <Button size="sm" onClick={onCheckout} className="mt-0.5 w-full justify-center">
+        Proceed to Checkout
+      </Button>
     </div>
   );
 }
