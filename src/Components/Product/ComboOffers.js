@@ -77,26 +77,33 @@ export default function ComboOffers({ offers = [] }) {
                 {/* Every item at the same fixed size regardless of how many
                     are in the combo (2 or 4) — a stretching grid made a
                     2-item combo's photos look completely different from a
-                    4-item one. Each photo carries its own name + weight ×
-                    quantity right underneath it. */}
+                    4-item one. The quantity sits as an unmissable badge on
+                    the photo itself, and the name wraps to 2 lines instead
+                    of truncating, so nothing about what's in the box is
+                    left to guesswork. */}
                 <div className="mt-4 flex flex-wrap gap-3">
                   {(offer.items || []).map((item, index) => (
-                    <div key={item.id || index} className="flex w-18 flex-col items-center gap-1 text-center">
-                      <span className="relative block h-18 w-18 overflow-hidden rounded-xl border border-(--border-color) bg-(--surface-alt)">
+                    <div key={item.id || index} className="flex w-24 flex-col items-center gap-1.5 text-center">
+                      <span className="relative block h-24 w-24 overflow-hidden rounded-xl border border-(--border-color) bg-(--surface-alt)">
                         <Image
                           src={resolveImageUrl(item.Product?.image)}
                           alt={item.Product?.name || ""}
                           fill
-                          sizes="72px"
+                          sizes="96px"
                           className="object-cover"
                         />
+                        {item.quantity > 1 && (
+                          <span className="absolute bottom-1 right-1 rounded-full bg-(--foreground)/85 px-1.5 py-0.5 text-[11px] font-semibold text-(--surface)">
+                            ×{item.quantity}
+                          </span>
+                        )}
                       </span>
-                      <p className="w-full truncate text-[11px] font-medium text-(--foreground)">
+                      <p className="line-clamp-2 w-full text-xs font-medium leading-tight text-(--foreground)">
                         {item.Product?.name}
                       </p>
-                      <p className="text-[10px] text-(--secondary-text)">
-                        {item.variant?.weight} × {item.quantity}
-                      </p>
+                      {item.variant?.weight && (
+                        <p className="text-[11px] text-(--secondary-text)">{item.variant.weight}</p>
+                      )}
                     </div>
                   ))}
                 </div>
