@@ -43,20 +43,31 @@ export default function SubscribeAndSave() {
 
   return (
     <section className="relative flex min-h-[200px] items-center justify-center overflow-hidden text-center text-(--surface) max-md:min-h-[240px]">
-      <Image src={subscribeImage} alt="" fill sizes="100vw" className="object-cover" />
+      <Image
+        src={subscribeImage}
+        alt=""
+        fill
+        sizes="100vw"
+        className="object-cover"
+      />
       <div className="absolute inset-0 bg-linear-to-t from-black/85 via-black/60 to-black/30" />
 
       <div className="relative mx-auto flex max-w-xl flex-col items-center gap-3 px-4 py-8">
         <span className="flex h-11 w-11 items-center justify-center rounded-full bg-(--surface)/15">
           <FiRepeat size={18} />
         </span>
-        <h2 className="font-heading text-2xl md:text-3xl">Subscribe &amp; Save</h2>
+        <h2 className="font-heading text-2xl md:text-3xl">
+          Subscribe &amp; Save
+        </h2>
         <p className="text-sm text-(--surface)/90 md:text-base">
-          Be the first to know when new products or exclusive offers drop — and save
-          more with repeat deliveries on your favorites.
+          Be the first to know when new products or exclusive offers drop — and
+          save more with repeat deliveries on your favorites.
         </p>
 
-        <form onSubmit={handleSubmit} className="mt-2 flex w-full max-w-sm flex-wrap justify-center gap-2 sm:flex-nowrap">
+        <form
+          onSubmit={handleSubmit}
+          className="mt-2 flex w-full max-w-sm flex-wrap justify-center gap-2 sm:flex-nowrap"
+        >
           <FloatingLabelInput
             id="subscribe-email"
             type="email"
@@ -74,7 +85,10 @@ export default function SubscribeAndSave() {
           >
             {isSubmitting ? "Subscribing..." : "Subscribe"}
             {!isSubmitting && (
-              <FiSend size={14} className="transition-transform duration-300 group-hover:translate-x-1" />
+              <FiSend
+                size={14}
+                className="transition-transform duration-300 group-hover:translate-x-1"
+              />
             )}
           </button>
         </form>

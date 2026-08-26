@@ -1,16 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
-import {
-  FiFacebook,
-  FiInstagram,
-  FiMail,
-  FiPhone,
-  FiTwitter,
-} from "react-icons/fi";
+import { FiFacebook, FiInstagram, FiMail } from "react-icons/fi";
 import { BRAND_NAME, BRAND_TAGLINE } from "@/Constant/Constant";
 import footerImage from "@/assets/home/footer.png";
 import footerImageMobile from "@/assets/home/footerVertical.png";
-import logo from "@/assets/logo.png";
 
 export default function Footer() {
   const year = new Date().getFullYear();
@@ -35,16 +28,9 @@ export default function Footer() {
 
       <div className="relative z-10 mx-auto grid max-w-7xl grid-cols-4 gap-10 px-8 py-12 max-md:grid-cols-1 max-md:px-4">
         <div>
-          <div className="flex items-center gap-2">
-            <Image
-              src={logo}
-              alt={BRAND_NAME}
-              className="h-10 w-10 object-contain"
-            />
-            <h2 className="font-heading text-2xl text-(--surface)">
-              {BRAND_NAME}
-            </h2>
-          </div>
+          <h2 className="font-heading text-2xl text-(--surface)">
+            {BRAND_NAME}
+          </h2>
           <p className="mt-2 font-accent text-sm text-(--accent)">
             {BRAND_TAGLINE}
           </p>
@@ -54,25 +40,22 @@ export default function Footer() {
           </p>
           <div className="mt-4 flex gap-3 text-(--surface)/80">
             <a
-              href="#"
+              href="https://www.facebook.com/profile.php?id=61593933804150"
+              target="_blank"
+              rel="noopener noreferrer"
               aria-label="Facebook"
               className="transition-colors hover:text-(--accent)"
             >
               <FiFacebook size={18} />
             </a>
             <a
-              href="#"
+              href="https://www.instagram.com/sehatpotli.in/"
+              target="_blank"
+              rel="noopener noreferrer"
               aria-label="Instagram"
               className="transition-colors hover:text-(--accent)"
             >
               <FiInstagram size={18} />
-            </a>
-            <a
-              href="#"
-              aria-label="Twitter"
-              className="transition-colors hover:text-(--accent)"
-            >
-              <FiTwitter size={18} />
             </a>
           </div>
         </div>
@@ -177,10 +160,7 @@ export default function Footer() {
           </h3>
           <ul className="mt-3 flex flex-col gap-2 text-sm text-(--surface)/70">
             <li className="flex items-center gap-2">
-              <FiPhone size={14} /> +91 98765 43210
-            </li>
-            <li className="flex items-center gap-2">
-              <FiMail size={14} /> hello@sehatpotli.com
+              <FiMail size={14} /> sehatpotli18@gmail.com
             </li>
           </ul>
         </div>
