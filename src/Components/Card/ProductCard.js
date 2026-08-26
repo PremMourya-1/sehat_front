@@ -3,10 +3,12 @@
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useDispatch, useSelector } from "react-redux";
 import { FiEye, FiHeart, FiShield, FiStar, FiX } from "react-icons/fi";
 import ProductTags from "@/Components/Product/ProductTags";
 import VariantPicker from "@/Components/Product/VariantPicker";
 import AddToCartButton from "@/Components/Card/AddToCartButton";
+import { selectIsWishlisted, toggleWishlist } from "@/Store/Slices/wishlistSlice";
 import {
   formatPrice,
   getDefaultVariant,
@@ -41,6 +43,7 @@ function StarRating({ rating, reviewCount }) {
 }
 
 export default function ProductCard({ product }) {
+  const dispatch = useDispatch();
   const variants = useMemo(
     () => sortVariants(product?.variants || []),
     [product],
@@ -48,7 +51,10 @@ export default function ProductCard({ product }) {
   const [selectedVariant, setSelectedVariant] = useState(() =>
     getDefaultVariant(variants),
   );
-  const [wishlisted, setWishlisted] = useState(false);
+  // Global (not per-card-instance) and localStorage-backed — see
+  // Store/wishlistSlice.js — so the same product shows as wishlisted
+  // everywhere it appears, and survives a reload/login.
+  const wishlisted = useSelector(selectIsWishlisted(product?.id));
   const [quickViewOpen, setQuickViewOpen] = useState(false);
 
   if (!product) return null;
@@ -88,7 +94,7 @@ export default function ProductCard({ product }) {
 
           <button
             type="button"
-            onClick={() => setWishlisted((v) => !v)}
+            onClick={() => dispatch(toggleWishlist(product.id))}
             aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
             aria-pressed={wishlisted}
             className={`absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full bg-(--surface)/90 shadow-sm transition-colors ${
