@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { FiGift } from "react-icons/fi";
 import { selectCartItems, selectCartSubtotal } from "@/Store/Slices/cartSlice";
+import { openAuthModal } from "@/Store/Slices/uiSlice";
 import { cartRewardApi } from "@/Service/api";
 import { formatPrice, resolveImageUrl } from "@/Utils/utils";
 
@@ -25,36 +28,46 @@ const CONFETTI_COLORS = [
 
 // Randomized per-piece trajectories, generated once per burst outside of
 // render (see the effect in CartFillProgress that produces `burst`) rather
-// than via Math.random() during render itself.
+// than via Math.random() during render itself. `left` is a fixed viewport
+// percentage (set once via style, not animated) — only `y`/`x`/`rotate`
+// animate, and all three are transform properties, never top/left, so the
+// browser never has to reflow for a full-screen piece count.
 function generateConfettiPieces() {
-  return Array.from({ length: 22 }, (_, i) => ({
+  return Array.from({ length: 70 }, (_, i) => ({
     id: i,
     color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-    x: (Math.random() - 0.5) * 220,
-    y: -Math.random() * 160 - 40,
-    rotate: Math.random() * 360,
-    delay: Math.random() * 0.08,
+    left: Math.random() * 100,
+    size: 6 + Math.random() * 6,
+    drift: (Math.random() - 0.5) * 140,
+    rotate: 360 + Math.random() * 360,
+    duration: 1.8 + Math.random() * 1.4,
+    delay: Math.random() * 0.5,
   }));
 }
 
-// One-shot party-popper burst — a handful of little rectangles launched
-// from the center with randomized trajectories, gone after ~1.1s. Built
-// from plain Framer Motion spans rather than a confetti dependency, to
-// match this component's only-dependency-already-installed constraint.
-function ConfettiBurst({ pieces }) {
-  return (
-    <div className="pointer-events-none absolute inset-0 overflow-visible">
+// Whole-screen party-popper burst — confetti rains from the top edge of
+// the viewport across its full width, not just the small progress widget.
+// Rendered via a portal straight onto document.body so it's never clipped
+// by an ancestor's overflow-hidden (the widget cards themselves are
+// rounded-corner boxes that would otherwise crop it to their own bounds).
+// Built from plain Framer Motion spans rather than a confetti dependency,
+// to match this component's only-dependency-already-installed constraint.
+function FullScreenConfetti({ pieces }) {
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <div className="pointer-events-none fixed inset-0 z-100 overflow-hidden">
       {pieces.map((p) => (
         <motion.span
           key={p.id}
-          initial={{ x: 0, y: 0, opacity: 1, rotate: 0, scale: 0.6 }}
-          animate={{ x: p.x, y: p.y, opacity: 0, rotate: p.rotate, scale: 1 }}
-          transition={{ duration: 1.1, delay: p.delay, ease: "easeOut" }}
-          className="absolute left-1/2 top-1/2 h-2 w-2.5 rounded-[2px]"
-          style={{ backgroundColor: p.color }}
+          initial={{ y: "-10vh", x: 0, opacity: 1, rotate: 0 }}
+          animate={{ y: "110vh", x: [0, p.drift, -p.drift * 0.5, p.drift * 0.3], opacity: [1, 1, 1, 0], rotate: p.rotate }}
+          transition={{ duration: p.duration, delay: p.delay, ease: "easeIn" }}
+          className="absolute top-0 rounded-xs"
+          style={{ left: `${p.left}%`, width: p.size, height: p.size * 1.4, backgroundColor: p.color }}
         />
       ))}
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -127,6 +140,9 @@ function useRewardProgress(tiers, subtotal, cartRewardMode) {
 // Cart page itself.
 export default function CartFillProgress({ variant = "floating" }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const dispatch = useDispatch();
+  const { status } = useSession();
   const items = useSelector(selectCartItems);
   const subtotal = useSelector(selectCartSubtotal);
 
@@ -172,11 +188,35 @@ export default function CartFillProgress({ variant = "floating" }) {
   const suppressed = variant === "floating" && SUPPRESSED_ON.some((p) => pathname.startsWith(p));
   const visible = loaded && tiers.length > 0 && items.length > 0 && !suppressed;
 
+  // The whole widget doubles as a "go finish this order" shortcut — tapping
+  // it jumps straight to checkout, same auth gate the Cart page's own
+  // Proceed to Checkout button uses.
+  const goToCheckout = () => {
+    if (status !== "authenticated") {
+      dispatch(openAuthModal({ view: "login", redirectTo: "/checkout" }));
+      return;
+    }
+    router.push("/checkout");
+  };
+  const handleKeyDown = (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      goToCheckout();
+    }
+  };
+
   if (variant === "inline") {
     if (!loaded || tiers.length === 0) return null;
     return (
-      <div className="relative overflow-hidden rounded-2xl border border-(--border-color) bg-(--surface) p-5">
-        <AnimatePresence>{burst && <ConfettiBurst key={burst.key} pieces={burst.pieces} />}</AnimatePresence>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={goToCheckout}
+        onKeyDown={handleKeyDown}
+        aria-label="Go to checkout"
+        className="relative cursor-pointer overflow-hidden rounded-2xl border border-(--border-color) bg-(--surface) p-5 transition-colors hover:border-(--primary)"
+      >
+        {burst && <FullScreenConfetti pieces={burst.pieces} />}
         <RewardBody
           items={items}
           subtotal={subtotal}
@@ -198,10 +238,16 @@ export default function CartFillProgress({ variant = "floating" }) {
             initial={{ y: 60, opacity: 0, scale: 0.95 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 60, opacity: 0, scale: 0.95 }}
+            whileTap={{ scale: 0.97 }}
             transition={{ type: "spring", stiffness: 300, damping: 28 }}
-            className="pointer-events-auto relative mx-auto max-w-sm overflow-hidden rounded-2xl border border-(--border-color) bg-(--surface)/95 p-3.5 shadow-xl backdrop-blur-lg md:max-w-none"
+            role="button"
+            tabIndex={0}
+            onClick={goToCheckout}
+            onKeyDown={handleKeyDown}
+            aria-label="Go to checkout"
+            className="pointer-events-auto relative mx-auto max-w-sm cursor-pointer overflow-hidden rounded-2xl border border-(--border-color) bg-(--surface)/95 p-3.5 shadow-xl backdrop-blur-lg md:max-w-none"
           >
-            <AnimatePresence>{burst && <ConfettiBurst key={burst.key} pieces={burst.pieces} />}</AnimatePresence>
+            {burst && <FullScreenConfetti pieces={burst.pieces} />}
             <RewardBody
               items={items}
               subtotal={subtotal}
