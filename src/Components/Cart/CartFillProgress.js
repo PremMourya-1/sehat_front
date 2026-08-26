@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
-import { FiGift, FiX } from "react-icons/fi";
+import { FiChevronLeft, FiChevronRight, FiGift, FiX } from "react-icons/fi";
 import {
   removeCombo,
   removeFromCart,
@@ -241,6 +241,7 @@ export default function CartFillProgress({ variant = "floating" }) {
   const [cartRewardMode, setCartRewardMode] = useState("highest");
   const [loaded, setLoaded] = useState(false);
   const [burst, setBurst] = useState(null);
+  const [minimized, setMinimized] = useState(false);
   const prevAwardedIds = useRef(null);
 
   useEffect(() => {
@@ -326,20 +327,52 @@ export default function CartFillProgress({ variant = "floating" }) {
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 60, opacity: 0, scale: 0.95 }}
             transition={{ type: "spring", stiffness: 300, damping: 28 }}
-            className={`pointer-events-auto relative mx-auto max-w-sm overflow-hidden rounded-2xl p-3.5 shadow-xl md:max-w-none ${GLASS_CLASSES}`}
+            className="pointer-events-auto relative mx-auto max-w-sm md:max-w-none"
           >
             {burst && <FullScreenConfetti pieces={burst.pieces} />}
-            <RewardBody
-              items={items}
-              subtotal={subtotal}
-              awarded={awarded}
-              next={next}
-              targetAmount={targetAmount}
-              pct={pct}
-              compact
-              onRemoveItem={handleRemoveItem}
-              onCheckout={goToCheckout}
-            />
+
+            {/* Peek tab — anchored from the BOTTOM, not the top: this
+                wrapper is a plain block, so once the card below unmounts
+                (an absolutely-positioned sibling never contributes to a
+                block's own height) the wrapper's height collapses to
+                zero and its top edge moves with it. Its bottom edge stays
+                exactly where the outer box's own `bottom-24`/`bottom-4`
+                anchor put it though, so a `bottom`-relative offset here
+                is the only one that keeps the tab visually fixed in
+                place whether the card is open or collapsed. */}
+            <button
+              type="button"
+              onClick={() => setMinimized((m) => !m)}
+              aria-label={minimized ? "Show cart progress" : "Hide cart progress"}
+              className={`absolute bottom-4 right-0 z-10 flex h-8 w-8 items-center justify-center rounded-full shadow-md ${GLASS_CLASSES}`}
+            >
+              {minimized ? <FiChevronLeft size={16} /> : <FiChevronRight size={16} />}
+            </button>
+
+            <AnimatePresence>
+              {!minimized && (
+                <motion.div
+                  key="card"
+                  initial={{ x: 80, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: 80, opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 28 }}
+                  className={`relative mr-9 overflow-hidden rounded-2xl p-3.5 shadow-xl ${GLASS_CLASSES}`}
+                >
+                  <RewardBody
+                    items={items}
+                    subtotal={subtotal}
+                    awarded={awarded}
+                    next={next}
+                    targetAmount={targetAmount}
+                    pct={pct}
+                    compact
+                    onRemoveItem={handleRemoveItem}
+                    onCheckout={goToCheckout}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>
