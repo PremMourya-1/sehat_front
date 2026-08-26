@@ -55,61 +55,75 @@ export default function ComboOffers({ offers = [] }) {
           subtitle="More you buy, more you save"
         />
 
-        <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
           {validOffers.map((offer) => {
             const savings = (offer.individualTotal || 0) - Number(offer.comboPrice || 0);
+            const previewItems = (offer.items || []).slice(0, 4);
+            // "Almonds 250g + Cashews 250g" — lets a shopper see exactly
+            // which products and what size are in the bundle without
+            // having to squint at the collage thumbnails.
+            const itemsCaption = (offer.items || [])
+              .map((item) => `${item.Product?.name || ""}${item.variant?.weight ? ` ${item.variant.weight}` : ""}`)
+              .filter(Boolean)
+              .join(" + ");
 
             return (
               <div
                 key={offer.id}
-                className="group flex flex-col gap-3 rounded-2xl border border-(--border-color) bg-(--surface) p-6 shadow-sm transition-shadow hover:shadow-md"
+                className="group flex flex-col overflow-hidden rounded-2xl border border-(--border-color) bg-(--surface) shadow-sm transition-shadow hover:shadow-md"
               >
-                <div className="flex items-center gap-2">
-                  {(offer.items || []).slice(0, 4).map((item, index) => (
+                <div className="relative grid h-48 grid-cols-2 gap-1 bg-(--surface-alt) p-1">
+                  {previewItems.map((item, index) => (
                     <span
                       key={item.id || index}
-                      className="relative block h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-(--border-color) bg-(--surface-alt)"
+                      className="relative block overflow-hidden rounded-lg bg-(--surface-alt)"
                     >
                       <Image
                         src={resolveImageUrl(item.Product?.image)}
                         alt={item.Product?.name || offer.title}
                         fill
-                        sizes="48px"
-                        className="object-cover"
+                        sizes="(max-width: 768px) 50vw, 25vw"
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                     </span>
                   ))}
-                </div>
 
-                {offer.discountLabel && (
-                  <span className="flex w-fit items-center gap-1.5 rounded-full bg-(--accent) px-3 py-1 text-xs font-semibold text-(--foreground)">
-                    {offer.discountLabel}
-                  </span>
-                )}
-                <h3 className="font-heading text-xl text-(--foreground)">{offer.title}</h3>
-                {offer.description && (
-                  <p className="text-sm text-(--secondary-text)">{offer.description}</p>
-                )}
-
-                <div className="flex items-baseline gap-2">
-                  <span className="text-lg font-semibold text-(--foreground)">
-                    {formatPrice(offer.comboPrice)}
-                  </span>
-                  {savings > 0 && (
-                    <span className="text-sm text-(--muted) line-through">
-                      {formatPrice(offer.individualTotal)}
+                  {offer.discountLabel && (
+                    <span className="absolute left-2 top-2 rounded-full bg-(--accent) px-2.5 py-1 text-xs font-semibold text-(--foreground) shadow-sm">
+                      {offer.discountLabel}
                     </span>
                   )}
                 </div>
 
-                <Button
-                  size="sm"
-                  icon={FiShoppingBag}
-                  className="mt-auto w-fit"
-                  onClick={() => handleAdd(offer)}
-                >
-                  Add to Cart
-                </Button>
+                <div className="flex flex-1 flex-col gap-2 p-5">
+                  <h3 className="font-heading text-xl text-(--foreground)">{offer.title}</h3>
+                  {itemsCaption && (
+                    <p className="text-xs font-medium text-(--secondary-text) line-clamp-2">{itemsCaption}</p>
+                  )}
+                  {offer.description && (
+                    <p className="text-sm text-(--secondary-text) line-clamp-2">{offer.description}</p>
+                  )}
+
+                  <div className="mt-1 flex items-baseline gap-2">
+                    <span className="text-lg font-semibold text-(--foreground)">
+                      {formatPrice(offer.comboPrice)}
+                    </span>
+                    {savings > 0 && (
+                      <span className="text-sm text-(--muted) line-through">
+                        {formatPrice(offer.individualTotal)}
+                      </span>
+                    )}
+                  </div>
+
+                  <Button
+                    size="sm"
+                    icon={FiShoppingBag}
+                    className="mt-auto w-full justify-center"
+                    onClick={() => handleAdd(offer)}
+                  >
+                    Add to Cart
+                  </Button>
+                </div>
               </div>
             );
           })}
