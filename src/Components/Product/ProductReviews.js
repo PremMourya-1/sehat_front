@@ -1,249 +1,133 @@
 "use client";
 
 import { useState } from "react";
-import toast from "react-hot-toast";
-import { FiCamera, FiCheckCircle, FiStar, FiX } from "react-icons/fi";
-import Button from "@/Components/Button/Button";
-import FloatingLabelInput from "@/Components/Form/FloatingLabelInput";
+import Link from "next/link";
+import { FiStar } from "react-icons/fi";
 import { reviewApi } from "@/Service/api";
-import { formatDate, resolveImageUrl } from "@/Utils/utils";
+import { formatDate } from "@/Utils/utils";
 
 function Stars({ rating, size = 14 }) {
   return (
     <div className="flex text-(--accent)">
       {Array.from({ length: 5 }).map((_, i) => (
-        <FiStar key={i} size={size} fill={i < rating ? "currentColor" : "none"} />
+        <FiStar key={i} size={size} fill={i < Math.round(rating) ? "currentColor" : "none"} />
       ))}
     </div>
   );
 }
 
-// Real, order-verified customer reviews. To stop fake/spam reviews, a
-// customer must first prove they bought the product by entering the order
-// number from their bill/package — the backend checks that order actually
-// contains this product and that the order number hasn't been used for a
-// review before (each order number verifies, and can post, exactly once).
-export default function ProductReviews({ productId, productName, reviews: initialReviews = [] }) {
-  const [reviews, setReviews] = useState(initialReviews);
-  const [formOpen, setFormOpen] = useState(false);
+function RatingBreakdown({ breakdown, totalReviews }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      {breakdown.map(({ star, count }) => (
+        <div key={star} className="flex items-center gap-2 text-xs text-(--secondary-text)">
+          <span className="w-8 shrink-0">{star} star</span>
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-(--surface)">
+            <div
+              className="h-full rounded-full bg-(--accent)"
+              style={{ width: totalReviews ? `${(count / totalReviews) * 100}%` : "0%" }}
+            />
+          </div>
+          <span className="w-6 shrink-0 text-right">{count}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
-  const [orderNumber, setOrderNumber] = useState("");
-  const [verifying, setVerifying] = useState(false);
-  const [verified, setVerified] = useState(false);
-  const [verifyError, setVerifyError] = useState("");
+// Read-only display — reading is public, but writing a review only happens
+// from the customer's own order detail page once that order is delivered
+// (see Components/Account/ReviewPrompt.js), not from here. This just shows
+// what's already been approved.
+export default function ProductReviews({ productId, initialData }) {
+  const [data, setData] = useState(initialData);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  const [name, setName] = useState("");
-  const [rating, setRating] = useState(5);
-  const [comment, setComment] = useState("");
-  const [photo, setPhoto] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
+  const reviews = data?.reviews || [];
+  const totalReviews = data?.totalReviews || 0;
+  const averageRating = data?.averageRating || 0;
+  const breakdown = data?.ratingBreakdown || [];
+  const hasMore = data && data.page < data.totalPages;
 
-  const resetForm = () => {
-    setFormOpen(false);
-    setOrderNumber("");
-    setVerified(false);
-    setVerifyError("");
-    setName("");
-    setRating(5);
-    setComment("");
-    setPhoto(null);
-  };
-
-  const handleVerify = async (e) => {
-    e.preventDefault();
-    if (!orderNumber.trim()) return;
-
-    setVerifying(true);
-    setVerifyError("");
+  const loadMore = async () => {
+    if (!data || loadingMore) return;
+    setLoadingMore(true);
     try {
-      const res = await reviewApi.verify(productId, orderNumber.trim());
+      const res = await reviewApi.list(productId, { page: data.page + 1 });
       if (res.data.action) {
-        setVerified(true);
-      } else {
-        setVerifyError(res.data.message || "Verification failed");
+        setData((prev) => ({
+          ...res.data.data,
+          reviews: [...prev.reviews, ...res.data.data.reviews],
+        }));
       }
-    } catch (err) {
-      setVerifyError(err?.response?.data?.message || "Verification failed");
     } finally {
-      setVerifying(false);
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!name.trim() || !comment.trim()) return;
-
-    const formData = new FormData();
-    formData.append("orderNumber", orderNumber.trim());
-    formData.append("customerName", name.trim());
-    formData.append("rating", rating);
-    formData.append("comment", comment.trim());
-    if (photo) formData.append("photo", photo);
-
-    try {
-      setSubmitting(true);
-      const res = await reviewApi.create(productId, formData);
-      if (res.data.action) {
-        setReviews((prev) => [res.data.data, ...prev]);
-        toast.success("Thanks for your review!");
-        resetForm();
-      } else {
-        toast.error(res.data.message || "Failed to post review");
-      }
-    } catch (err) {
-      toast.error(err?.response?.data?.message || "Failed to post review");
-    } finally {
-      setSubmitting(false);
+      setLoadingMore(false);
     }
   };
 
   return (
-    <div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="font-heading text-lg text-(--foreground) md:text-xl">
-          Customer Reviews {reviews.length > 0 && `(${reviews.length})`}
-        </h3>
-        {!formOpen && (
-          <Button size="sm" onClick={() => setFormOpen(true)}>
-            Write a Review
-          </Button>
-        )}
-      </div>
+    <div id="reviews">
+      <h3 className="font-heading text-lg text-(--foreground) md:text-xl">
+        Customer Reviews {totalReviews > 0 && `(${totalReviews})`}
+      </h3>
 
-      {reviews.length === 0 ? (
+      {totalReviews === 0 ? (
         <p className="mt-4 text-sm text-(--secondary-text)">
-          No reviews yet. Be the first to review this product!
+          No reviews yet.{" "}
+          <Link href="/account/orders" className="text-(--primary) underline">
+            Bought this? Rate it from your orders.
+          </Link>
         </p>
       ) : (
-        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-          {reviews.map((review) => (
-            <div key={review.id} className="rounded-xl border border-(--border-color) bg-(--surface-alt) p-4">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-(--foreground)">{review.customerName}</p>
-                <Stars rating={review.rating} />
-              </div>
-              <p className="mt-0.5 text-xs text-(--muted)">{formatDate(review.createdAt)}</p>
-              <p className="mt-2 text-sm text-(--secondary-text)">{review.comment}</p>
-              {review.photo && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={resolveImageUrl(review.photo)}
-                  alt="Review attachment"
-                  className="mt-2 h-20 w-20 rounded-lg object-cover"
-                />
-              )}
+        <>
+          <div className="mt-4 flex flex-col gap-4 rounded-xl border border-(--border-color) bg-(--surface-alt) p-4 sm:flex-row sm:items-center sm:gap-8">
+            <div className="flex shrink-0 flex-col items-center gap-1">
+              <span className="font-heading text-3xl text-(--foreground)">{averageRating}</span>
+              <Stars rating={averageRating} size={16} />
+              <span className="text-xs text-(--secondary-text)">{totalReviews} review{totalReviews !== 1 ? "s" : ""}</span>
             </div>
-          ))}
-        </div>
-      )}
-
-      {formOpen && (
-        <div className="mt-6 rounded-xl border border-(--border-color) bg-(--surface-alt) p-4 md:p-5">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-medium text-(--foreground)">
-              Write a review for {productName}
-            </p>
-            <button
-              type="button"
-              onClick={resetForm}
-              aria-label="Close review form"
-              className="text-(--secondary-text) hover:text-(--foreground)"
-            >
-              <FiX size={18} />
-            </button>
+            <div className="flex-1">
+              <RatingBreakdown breakdown={breakdown} totalReviews={totalReviews} />
+            </div>
           </div>
 
-          {!verified ? (
-            <form onSubmit={handleVerify} className="mt-4 flex flex-col gap-2">
-              <p className="text-xs text-(--secondary-text)">
-                To keep reviews genuine, enter the order number from your bill/package to
-                verify your purchase before reviewing.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <FloatingLabelInput
-                  id="review-order-number"
-                  type="text"
-                  value={orderNumber}
-                  onChange={(e) => {
-                    setOrderNumber(e.target.value);
-                    setVerifyError("");
-                  }}
-                  label="Enter your order number"
-                  wrapperClassName="min-w-0 flex-1"
-                />
-                <Button type="submit" size="sm" disabled={verifying || !orderNumber.trim()}>
-                  {verifying ? "Verifying..." : "Verify Order"}
-                </Button>
-              </div>
-              {verifyError && <p className="text-xs text-(--danger)">{verifyError}</p>}
-            </form>
-          ) : (
-            <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3">
-              <p className="flex items-center gap-1.5 text-xs font-medium text-(--success)">
-                <FiCheckCircle size={14} /> Order verified — you can post your review
-              </p>
-
-              <FloatingLabelInput
-                id="review-name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                label="Your name"
-                required
-              />
-
-              <div className="flex items-center gap-1">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => setRating(i + 1)}
-                    aria-label={`Rate ${i + 1} stars`}
-                    className="text-(--accent)"
-                  >
-                    <FiStar size={18} fill={i < rating ? "currentColor" : "none"} />
-                  </button>
-                ))}
-              </div>
-
-              <FloatingLabelInput
-                as="textarea"
-                id="review-comment"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                label="Share your experience..."
-                rows={3}
-                required
-              />
-
-              <div className="flex items-center gap-3">
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-(--secondary-text) hover:text-(--primary)">
-                  <FiCamera size={16} />
-                  {photo ? "Change photo" : "Add a photo"}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => setPhoto(e.target.files?.[0] || null)}
-                  />
-                </label>
-                {photo && (
-                  <button
-                    type="button"
-                    onClick={() => setPhoto(null)}
-                    className="flex items-center gap-1 text-xs text-(--danger)"
-                  >
-                    <FiX size={13} /> Remove
-                  </button>
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+            {reviews.map((review) => (
+              <div key={review.id} className="rounded-xl border border-(--border-color) bg-(--surface-alt) p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-(--foreground)">{review.customerName}</p>
+                  <Stars rating={review.rating} />
+                </div>
+                <p className="mt-0.5 text-xs text-(--muted)">{formatDate(review.createdAt)}</p>
+                <p className="mt-2 text-sm text-(--secondary-text)">{review.comment}</p>
+                {review.photos?.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {review.photos.map((photo, i) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        key={i}
+                        src={photo}
+                        alt={`${i + 1} of ${review.photos.length}`}
+                        className="h-20 w-20 rounded-lg object-cover"
+                      />
+                    ))}
+                  </div>
                 )}
               </div>
+            ))}
+          </div>
 
-              <Button type="submit" size="sm" className="w-fit" disabled={submitting}>
-                {submitting ? "Submitting..." : "Submit Review"}
-              </Button>
-            </form>
+          {hasMore && (
+            <button
+              type="button"
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="mt-4 w-full rounded-full border border-(--border-color) py-2 text-sm font-medium text-(--primary) hover:bg-(--surface-alt)"
+            >
+              {loadingMore ? "Loading..." : "Load more reviews"}
+            </button>
           )}
-        </div>
+        </>
       )}
     </div>
   );

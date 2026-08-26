@@ -101,12 +101,15 @@ export const faqUrl = {
   list: "/faqs",
 };
 
+export const launchCountdownUrl = {
+  get: "/web-settings/launch-countdown",
+};
+
 export const newsletterUrl = {
   subscribe: "/newsletter/subscribe",
 };
 
 export const reviewUrl = {
   list: (productId) => `/products/${productId}/reviews`,
-  verify: (productId) => `/products/${productId}/reviews/verify`,
   create: (productId) => `/products/${productId}/reviews`,
 };

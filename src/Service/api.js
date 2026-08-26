@@ -11,6 +11,7 @@ import {
   faqUrl,
   heroBannerUrl,
   homeUrl,
+  launchCountdownUrl,
   mixUrl,
   mobileUrl,
   newsletterUrl,
@@ -167,14 +168,22 @@ export const faqApi = {
   list: () => apiJson.get(faqUrl.list),
 };
 
+// Pre-launch / sale hype countdown banner — admin-managed (see
+// Components/Common/LaunchCountdownBanner.js), public + unauthenticated.
+export const launchCountdownApi = {
+  get: () => apiJson.get(launchCountdownUrl.get),
+};
+
 // Newsletter
 export const newsletterApi = {
   subscribe: (email) => apiJson.post(newsletterUrl.subscribe, { email }),
 };
 
-// Product reviews (order-number verified)
+// Product reviews — public listing (paginated, approved-only), creation
+// requires a logged-in customer with a delivered order containing the
+// product (see Components/Account/ReviewPrompt.js, used from the order
+// detail page — not the product page anymore).
 export const reviewApi = {
-  list: (productId) => apiJson.get(reviewUrl.list(productId)),
-  verify: (productId, orderNumber) => apiJson.post(reviewUrl.verify(productId), { orderNumber }),
+  list: (productId, params) => apiJson.get(reviewUrl.list(productId), { params }),
   create: (productId, formData) => apiMultipart.post(reviewUrl.create(productId), formData),
 };

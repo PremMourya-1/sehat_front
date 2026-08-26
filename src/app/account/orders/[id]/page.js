@@ -12,6 +12,7 @@ import Card from "@/Components/Card/Card";
 import Button from "@/Components/Button/Button";
 import Loader from "@/Components/Common/Loader/Loader";
 import OrderStatusStepper from "@/Components/Account/OrderStatusStepper";
+import ReviewPrompt from "@/Components/Account/ReviewPrompt";
 import { formatDate, formatPrice, resolveImageUrl } from "@/Utils/utils";
 
 export default function OrderDetailPage() {
@@ -19,6 +20,7 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [reviewedProductIds, setReviewedProductIds] = useState([]);
 
   // Self-cancel — only ever offered while customerStatus is "confirmed"
   // (see controllers/orderController.js cancelOrder for the same check
@@ -38,8 +40,12 @@ export default function OrderDetailPage() {
       .getById(id)
       .then((res) => {
         if (ignore) return;
-        if (res.data.action) setOrder(res.data.data);
-        else setNotFound(true);
+        if (res.data.action) {
+          setOrder(res.data.data);
+          setReviewedProductIds(res.data.data.reviewedProductIds || []);
+        } else {
+          setNotFound(true);
+        }
       })
       .catch(() => {
         if (!ignore) setNotFound(true);
@@ -237,6 +243,23 @@ export default function OrderDetailPage() {
                         Part of mix: {item.customMixName || "Custom Mix"}
                       </p>
                     )}
+                    {order.customerStatus === "delivered" &&
+                      !item.isFreeGift &&
+                      item.Product?.id &&
+                      (reviewedProductIds.includes(item.Product.id) ? (
+                        <p className="mt-1 text-xs text-(--success)">Reviewed — thanks!</p>
+                      ) : (
+                        <div className="mt-1">
+                          <ReviewPrompt
+                            productId={item.Product.id}
+                            productName={item.Product.name || "this product"}
+                            orderId={order.id}
+                            onSubmitted={(productId) =>
+                              setReviewedProductIds((prev) => [...prev, productId])
+                            }
+                          />
+                        </div>
+                      ))}
                   </div>
                   <span className="text-sm font-semibold text-(--foreground)">
                     {formatPrice(item.price * item.quantity)}
