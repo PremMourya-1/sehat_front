@@ -1,3 +1,4 @@
+import { cache } from "react";
 import Link from "next/link";
 import { FiAlertCircle, FiChevronRight, FiStar } from "react-icons/fi";
 import Card from "@/Components/Card/Card";
@@ -12,16 +13,63 @@ import ShelfLifeAndServing from "@/Components/Product/ShelfLifeAndServing";
 import ProductReviews from "@/Components/Product/ProductReviews";
 import Button from "@/Components/Button/Button";
 import { productApi, reviewApi } from "@/Service/api";
+import { resolveImageUrl } from "@/Utils/utils";
 
 export const dynamic = "force-dynamic";
 
-async function getProduct(id) {
+// Same fallback as app/layout.js's metadataBase — see that file for why a
+// hardcoded production fallback matters (an unset env var must never
+// silently produce a localhost link-preview URL).
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.sehatpotli.in";
+
+// Wrapped in React's cache() so generateMetadata below and the page
+// component share one request instead of hitting the API twice per page
+// view — both need the same product, and Next.js only auto-dedupes native
+// fetch() calls, not this project's axios-based productApi.
+const getProduct = cache(async (id) => {
   try {
     const res = await productApi.getById(id);
     return res.data.action ? res.data.data : null;
   } catch {
     return null;
   }
+});
+
+// Per-product Open Graph/Twitter Card metadata — server-rendered via the
+// Metadata API (not injected client-side, which link-preview crawlers like
+// WhatsApp/Facebook never execute JS for anyway). Falls back to the parent
+// layout's site-wide metadata (app/layout.js) if the product can't be
+// loaded, rather than a broken/empty preview.
+export async function generateMetadata({ params }) {
+  const { id } = await params;
+  const product = await getProduct(id);
+  if (!product) return {};
+
+  const title = product.name;
+  const description =
+    product.shortDescription ||
+    `Shop ${product.name} at Sehat Potli — premium, hand-picked dry fruits and nuts delivered fresh.`;
+  const url = `${SITE_URL}/products/${id}`;
+  const imageUrl = resolveImageUrl(product.image);
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title: `${product.name} | Sehat Potli`,
+      description,
+      url,
+      type: "website",
+      images: [{ url: imageUrl, alt: product.name }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${product.name} | Sehat Potli`,
+      description,
+      images: [imageUrl],
+    },
+  };
 }
 
 async function getReviews(id) {

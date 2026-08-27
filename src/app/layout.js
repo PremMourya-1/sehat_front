@@ -31,10 +31,43 @@ const poppins = Poppins({
   display: "swap",
 });
 
+// Falls back to the production domain if NEXT_PUBLIC_SITE_URL isn't set on
+// the host — without metadataBase, Next.js can't resolve any relative
+// og:image/url into the absolute URL link-preview crawlers require, and
+// would otherwise silently fall back to localhost in a production build.
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.sehatpotli.in";
+
+const SITE_TITLE = "Sehat Potli — Premium Dry Fruits & Nuts";
+const SITE_DESCRIPTION =
+  "Sehat Ki Potli, Har Ghar Ki Zaroorat — Sehat Potli brings you premium, hand-picked dry fruits and nuts, sourced with care and delivered fresh to your door.";
+
+// Every route inherits this unless it defines its own metadata/
+// generateMetadata (see app/products/[id]/page.js for the per-product
+// override) — so the homepage and every static page (About, Contact, ...)
+// get a correct, complete link-preview for free, and only product pages
+// need their own dynamic version.
 export const metadata = {
-  title: "Sehat Potli | Premium Dry Fruits & Nuts",
-  description:
-    "Sehat Ki Potli, Har Ghar Ki Zaroorat — Sehat Potli brings you premium, hand-picked dry fruits and nuts, sourced with care and delivered fresh to your door.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_TITLE,
+    template: "%s | Sehat Potli",
+  },
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    siteName: "Sehat Potli",
+    images: [{ url: "/og-image.jpg", width: 1536, height: 1024, alt: SITE_TITLE }],
+    type: "website",
+    locale: "en_IN",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: ["/og-image.jpg"],
+  },
 };
 
 export default function RootLayout({ children }) {
