@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "About Us | Sehat Potli",
-  description: "The story behind Sehat Potli's premium dry fruits and nuts.",
+  description: "The story behind Sehat Potli's premium dry fruits and seeds.",
 };
 
 async function getFaqs() {

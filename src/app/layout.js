@@ -37,9 +37,9 @@ const poppins = Poppins({
 // would otherwise silently fall back to localhost in a production build.
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.sehatpotli.in";
 
-const SITE_TITLE = "Sehat Potli — Premium Dry Fruits & Nuts";
+const SITE_TITLE = "Sehat Potli — Premium Dry Fruits & Seeds";
 const SITE_DESCRIPTION =
-  "Sehat Ki Potli, Har Ghar Ki Zaroorat — Sehat Potli brings you premium, hand-picked dry fruits and nuts, sourced with care and delivered fresh to your door.";
+  "Sehat Ki Potli, Har Ghar Ki Zaroorat — Sehat Potli brings you premium, hand-picked dry fruits and seeds, sourced with care and delivered fresh to your door.";
 
 // Every route inherits this unless it defines its own metadata/
 // generateMetadata (see app/products/[id]/page.js for the per-product
@@ -58,7 +58,7 @@ export const metadata = {
     description: SITE_DESCRIPTION,
     url: SITE_URL,
     siteName: "Sehat Potli",
-    images: [{ url: "/og-image.jpg", width: 1536, height: 1024, alt: SITE_TITLE }],
+    images: [{ url: "/og-image.jpg", width: 1200, height: 1141, alt: SITE_TITLE }],
     type: "website",
     locale: "en_IN",
   },

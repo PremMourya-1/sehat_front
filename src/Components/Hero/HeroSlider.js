@@ -97,7 +97,7 @@ export default function HeroSlider({ banners = [] }) {
             {BRAND_NAME}
           </h1>
           <p className="mt-4 text-(--secondary-text) md:text-lg">
-            Premium, hand-picked dry fruits and nuts — sourced with care, packed
+            Premium, hand-picked dry fruits and seeds — sourced with care, packed
             fresh, delivered to your doorstep.
           </p>
           <div className="mt-8 flex justify-center gap-4">

@@ -35,7 +35,7 @@ export default function Footer() {
             {BRAND_TAGLINE}
           </p>
           <p className="mt-3 text-sm text-(--surface)/70">
-            Hand-picked, premium dry fruits and nuts — sourced with care, packed
+            Hand-picked, premium dry fruits and seeds — sourced with care, packed
             fresh, and delivered to your doorstep.
           </p>
           <div className="mt-4 flex gap-3 text-(--surface)/80">

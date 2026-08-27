@@ -48,7 +48,7 @@ export async function generateMetadata({ params }) {
   const title = product.name;
   const description =
     product.shortDescription ||
-    `Shop ${product.name} at Sehat Potli — premium, hand-picked dry fruits and nuts delivered fresh.`;
+    `Shop ${product.name} at Sehat Potli — premium, hand-picked dry fruits and seeds delivered fresh.`;
   const url = `${SITE_URL}/products/${id}`;
   const imageUrl = resolveImageUrl(product.image);
 
