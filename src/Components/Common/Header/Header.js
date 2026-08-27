@@ -61,8 +61,7 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-(--border-color) bg-(--surface)/90 backdrop-blur">
       <div className="hidden bg-(--btn-primary) py-1.5 text-center text-xs tracking-wide text-(--surface)/90 sm:block">
-        100% Natural &amp; FSSAI Certified &middot; Free Shipping on Prepaid
-        Orders
+        100% Natural &amp; FSSAI Certified
       </div>
 
       <div className="relative mx-auto flex max-w-7xl items-center justify-between px-8 py-3 max-md:px-4">
