@@ -3,13 +3,17 @@ import Link from "next/link";
 import SectionHeading from "@/Components/Common/SectionHeading";
 import { resolveImageUrl } from "@/Utils/utils";
 
-// Level-1 taxonomy — a responsive card grid. Flexbox with flex-wrap +
-// justify-center (not CSS Grid) on purpose: exactly 2 cards/row on mobile,
-// 4/row from lg up, and — because grid's fixed column tracks are shared
-// across every row — a grid would leave a short last row stuck against the
-// left edge with empty cells trailing it. A wrapped flex row centers its
-// own contents independently of other rows, so an incomplete last row
-// (any category count) centers itself instead.
+// Level-1 taxonomy. Flexbox with flex-wrap + justify-center (not CSS Grid)
+// on purpose: a grid's fixed column tracks are shared across every row, so
+// an incomplete last row (any category count — 1 through 5+) sits stuck
+// against the left edge instead of centering itself; a wrapped flex row
+// centers its own contents independently of other rows, so this always
+// looks centered regardless of how many categories exist.
+//
+// Circular icon (not a square/rectangular card) reads as a more premium,
+// "app-like" category picker — same visual language as Blinkit/Zepto/most
+// grocery apps — and scales down to a tight mobile row far more gracefully
+// than a bordered card with a description line ever could.
 export default function ShopByType({ categories = [] }) {
   const hasCategories = Array.isArray(categories) && categories.length > 0;
   if (!hasCategories) return null;
@@ -22,32 +26,25 @@ export default function ShopByType({ categories = [] }) {
           subtitle="Find exactly what you're looking for"
         />
 
-        <div className="mt-10 grid justify-center grid-cols-6 max-md:grid-cols-4 max-sm:grid-cols-2 gap-4 sm:gap-6">
+        <div className="mt-10 flex flex-wrap justify-center gap-x-5 gap-y-6 sm:gap-x-8 md:gap-x-10">
           {categories.map((category) => (
             <Link
               key={category.id}
               href={`/category/${category.id}`}
-              className="group flex flex-none flex-col overflow-hidden rounded-xl border border-(--border-color) bg-(--surface) shadow-sm transition-all duration-300 hover:border-(--primary)/50 hover:shadow-md "
+              className="group flex w-20 flex-none flex-col items-center gap-2 sm:w-24 md:w-28"
             >
-              <span className="relative block aspect-square w-full overflow-hidden bg-(--surface-alt)">
+              <span className="relative block h-20 w-20 overflow-hidden rounded-full border border-(--border-color) bg-(--surface) shadow-sm transition-all duration-300 group-hover:border-(--primary)/60 group-hover:shadow-md sm:h-24 sm:w-24 md:h-28 md:w-28">
                 <Image
                   src={resolveImageUrl(category.image)}
                   alt={category.name}
                   fill
-                  sizes="(max-width: 1024px) 50vw, 25vw"
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  sizes="(max-width: 640px) 80px, 112px"
+                  className="object-cover transition-transform duration-500 group-hover:scale-110"
                 />
               </span>
-              <div className="flex flex-col gap-1 p-4">
-                <h3 className="font-heading text-base font-semibold text-(--foreground) transition-colors group-hover:text-(--primary)">
-                  {category.name}
-                </h3>
-                {category.shortDescription && (
-                  <p className="text-sm text-(--secondary-text) line-clamp-1">
-                    {category.shortDescription}
-                  </p>
-                )}
-              </div>
+              <span className="line-clamp-2 text-center text-xs font-medium leading-tight text-(--foreground) transition-colors group-hover:text-(--primary) sm:text-sm">
+                {category.name}
+              </span>
             </Link>
           ))}
         </div>

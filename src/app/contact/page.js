@@ -36,22 +36,25 @@ export default function ContactPage() {
             <div>
               <p className="font-medium text-(--foreground)">Our Address</p>
               <p className="text-sm text-(--secondary-text)">
-                123 Orchard Lane, Connaught Place, New Delhi, India
+                Suraj Nagar, Nirmal Vihar, Nangal Jaisabohra, Jaipur, Rajasthan
+                India, 302012
               </p>
             </div>
           </div>
-          <div className="flex items-start gap-3">
+          {/* <div className="flex items-start gap-3">
             <FiPhone className="mt-1 text-(--primary)" size={20} />
             <div>
               <p className="font-medium text-(--foreground)">Call Us</p>
               <p className="text-sm text-(--secondary-text)">+91 98765 43210</p>
             </div>
-          </div>
+          </div> */}
           <div className="flex items-start gap-3">
             <FiMail className="mt-1 text-(--primary)" size={20} />
             <div>
               <p className="font-medium text-(--foreground)">Email Us</p>
-              <p className="text-sm text-(--secondary-text)">hello@sehatpotli.com</p>
+              <p className="text-sm text-(--secondary-text)">
+                sehatpotli18@gmail.com
+              </p>
             </div>
           </div>
         </div>

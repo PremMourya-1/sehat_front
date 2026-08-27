@@ -153,6 +153,7 @@ export default function ProductCard({ product }) {
               selectedId={activeVariant?.id}
               onSelect={setSelectedVariant}
               size="sm"
+              wrap={false}
             />
           )}
 
@@ -160,7 +161,7 @@ export default function ProductCard({ product }) {
             <span className="text-lg font-semibold text-(--foreground) max-md:text-sm">
               {activeVariant ? formatPrice(activeVariant.price) : "--"}
             </span>
-            {activeVariant?.mrp > activeVariant?.price && (
+            {Number(activeVariant?.mrp) > Number(activeVariant?.price) && (
               <span className="text-sm text-(--muted) line-through max-md:text-xs">
                 {formatPrice(activeVariant.mrp)}
               </span>
@@ -244,7 +245,7 @@ export default function ProductCard({ product }) {
                 <span className="text-lg font-semibold text-(--foreground)">
                   {activeVariant ? formatPrice(activeVariant.price) : "--"}
                 </span>
-                {activeVariant?.mrp > activeVariant?.price && (
+                {Number(activeVariant?.mrp) > Number(activeVariant?.price) && (
                   <span className="text-sm text-(--muted) line-through">
                     {formatPrice(activeVariant.mrp)}
                   </span>

@@ -169,8 +169,8 @@ export default function HeroSlider({ banners = [] }) {
             <Button url="/products" size="lg">
               Shop Now
             </Button>
-            <Button url="/products" variant="outline-light" size="lg">
-              Build Your Box
+            <Button url="/build-your-own-mix" variant="outline-light" size="lg">
+              Build Your Mix
             </Button>
           </div>
 

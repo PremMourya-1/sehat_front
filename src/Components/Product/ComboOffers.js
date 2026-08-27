@@ -120,7 +120,7 @@ export default function ComboOffers({ offers = [] }) {
                 </div>
 
                 <Button
-                  size="sm"
+                  size="md"
                   icon={FiShoppingBag}
                   className="mt-3 w-full justify-center"
                   onClick={() => handleAdd(offer)}

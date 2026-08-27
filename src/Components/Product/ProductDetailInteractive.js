@@ -31,7 +31,7 @@ export default function ProductDetailInteractive({ product }) {
         <span className="font-heading text-3xl text-(--foreground)">
           {activeVariant ? formatPrice(activeVariant.price) : "--"}
         </span>
-        {activeVariant?.mrp > activeVariant?.price && (
+        {Number(activeVariant?.mrp) > Number(activeVariant?.price) && (
           <>
             <span className="text-lg text-(--muted) line-through">
               {formatPrice(activeVariant.mrp)}
