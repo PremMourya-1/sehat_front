@@ -148,14 +148,12 @@ export default function ProductCard({ product }) {
           )}
 
           {variants.length > 0 && (
-            <div className="max-md:hidden">
-              <VariantPicker
-                variants={variants}
-                selectedId={activeVariant?.id}
-                onSelect={setSelectedVariant}
-                size="sm"
-              />
-            </div>
+            <VariantPicker
+              variants={variants}
+              selectedId={activeVariant?.id}
+              onSelect={setSelectedVariant}
+              size="sm"
+            />
           )}
 
           <div className="mt-1 flex items-baseline gap-2 max-md:gap-1.5">
