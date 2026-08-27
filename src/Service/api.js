@@ -7,6 +7,7 @@ import {
   categoryUrl,
   checkoutUrl,
   cmsUrl,
+  comboOfferUrl,
   couponUrl,
   faqUrl,
   heroBannerUrl,
@@ -63,6 +64,11 @@ export const productApi = {
 export const categoryApi = {
   list: () => apiJson.get(categoryUrl.list),
   getById: (id) => apiJson.get(categoryUrl.byId(id)),
+};
+
+// Combo offer detail page — the homepage list itself comes from homeApi.
+export const comboOfferApi = {
+  getById: (id) => apiJson.get(comboOfferUrl.byId(id)),
 };
 
 // Cart (server-persisted cart for logged-in customers) — see

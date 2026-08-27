@@ -35,6 +35,13 @@ export const categoryUrl = {
   byId: (id) => `/categories/${id}`,
 };
 
+// Combo offer detail page (see app/combo-offers/[id]/page.js) — the
+// homepage list itself comes bundled in homeUrl's /home response, this is
+// just the single-combo lookup for the click-through detail page.
+export const comboOfferUrl = {
+  byId: (id) => `/combo-offers/${id}`,
+};
+
 // Matches the real backend routes in routes/cartRoutes.js exactly (this
 // object previously had guessed paths — /cart/add, /cart/update,
 // /cart/remove/:id — that never matched anything live; nothing called
