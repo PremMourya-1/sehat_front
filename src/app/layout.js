@@ -8,6 +8,7 @@ import MobileBottomNav from "@/Components/Common/Header/MobileBottomNav";
 import CartFillProgress from "@/Components/Cart/CartFillProgress";
 import Footer from "@/Components/Common/Footer/Footer";
 import AuthModal from "@/Components/Auth/AuthModal";
+import ogImageMeta from "@/Data/ogImageMeta.json";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -58,7 +59,7 @@ export const metadata = {
     description: SITE_DESCRIPTION,
     url: SITE_URL,
     siteName: "Sehat Potli",
-    images: [{ url: "/og-image.jpg", width: 1200, height: 1141, alt: SITE_TITLE }],
+    images: [{ url: "/og-image.jpg", width: ogImageMeta.width, height: ogImageMeta.height, alt: SITE_TITLE }],
     type: "website",
     locale: "en_IN",
   },
