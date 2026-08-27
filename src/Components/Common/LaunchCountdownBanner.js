@@ -53,11 +53,59 @@ function TimeUnit({ value, label }) {
   );
 }
 
+const PARTY_EMOJIS = [
+  "🎉",
+  "🥳",
+  "🎊",
+  "✨",
+  "🎈",
+  "🍾",
+  "💃",
+  "🕺",
+  "🎁",
+  "⭐",
+  "🎉",
+  "🥳",
+];
+
+function PartyCelebration({ endText, onClose }) {
+  return createPortal(
+    <div
+      className="launch-party"
+      role="dialog"
+      aria-label="Countdown celebration"
+    >
+      <div className="launch-party__confetti" aria-hidden="true">
+        {PARTY_EMOJIS.map((emoji, index) => (
+          <span key={`${emoji}-${index}`} style={{ "--party-index": index }}>
+            {emoji}
+          </span>
+        ))}
+      </div>
+      <div className="launch-party__card">
+        <div className="launch-party__burst" aria-hidden="true">
+          🎉
+        </div>
+        <p className="launch-party__eyebrow">The wait is over</p>
+        <h2>{title || "It&apos;s party time!"}</h2>
+        <p className="launch-party__message">
+          {endText || "The countdown has ended. Let's celebrate!"}
+        </p>
+        <button type="button" className="launch-party__close" onClick={onClose}>
+          Start celebrating
+        </button>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 export default function LaunchCountdownBanner() {
   const [config, setConfig] = useState(null);
   const [timeLeft, setTimeLeft] = useState(null);
   const [dismissed, setDismissed] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -72,7 +120,8 @@ export default function LaunchCountdownBanner() {
     launchCountdownApi
       .get()
       .then((res) => {
-        if (active && res.data?.action) setConfig(res.data.data?.launchCountdown || null);
+        if (active && res.data?.action)
+          setConfig(res.data.data?.launchCountdown || null);
       })
       .catch(() => {
         // silently skip — a missing/unreachable config just means no banner
@@ -83,14 +132,25 @@ export default function LaunchCountdownBanner() {
     };
   }, []);
 
-  const targetMs = config?.targetDate ? new Date(config.targetDate).getTime() : null;
+  const targetMs = config?.targetDate
+    ? new Date(config.targetDate).getTime()
+    : null;
 
   useEffect(() => {
     if (!targetMs) return undefined;
     setTimeLeft(getTimeLeft(targetMs));
-    const timer = window.setInterval(() => setTimeLeft(getTimeLeft(targetMs)), 1000);
+    const timer = window.setInterval(
+      () => setTimeLeft(getTimeLeft(targetMs)),
+      1000,
+    );
     return () => window.clearInterval(timer);
   }, [targetMs]);
+
+  useEffect(() => {
+    if (timeLeft?.expired && config?.enabled && !dismissed) {
+      setShowCelebration(true);
+    }
+  }, [config?.enabled, dismissed, timeLeft?.expired]);
 
   const handleDismiss = () => {
     setDismissed(true);
@@ -102,14 +162,30 @@ export default function LaunchCountdownBanner() {
   };
 
   const shouldRender =
-    mounted && config?.enabled && targetMs && timeLeft && !timeLeft.expired && !dismissed;
+    mounted &&
+    config?.enabled &&
+    targetMs &&
+    timeLeft &&
+    !timeLeft.expired &&
+    !dismissed;
+
+  if (mounted && showCelebration && config?.enabled && !dismissed) {
+    return (
+      <PartyCelebration
+        endText={config.endText}
+        onClose={() => setShowCelebration(false)}
+      />
+    );
+  }
 
   if (!shouldRender) return null;
 
   const isUrgent = timeLeft.days === 0;
-  const position = config.position === "fixed-center" ? "fixed-center" : "below-header";
+  const position =
+    config.position === "fixed-center" ? "fixed-center" : "below-header";
   const title = config.title || "Sehat Potli is launching soon.";
-  const description = config.description || "Get ready to shop goodness for every home.";
+  const description =
+    config.description || "Get ready to shop goodness for every home.";
   const srLabel = `${timeLeft.days} days, ${timeLeft.hours} hours, ${timeLeft.minutes} minutes and ${timeLeft.seconds} seconds until launch`;
 
   const banner = (
@@ -140,7 +216,17 @@ export default function LaunchCountdownBanner() {
             <span className="launch-countdown__pulse-dot" aria-hidden="true" />
             <FiStar size={13} /> Something nourishing is coming
           </span>
-          <h2>{title}</h2>
+          <motion.h2
+            initial={{ opacity: 0, y: 14, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: [0.94, 1.04, 1] }}
+            transition={{
+              duration: 0.8,
+              ease: "easeOut",
+              scale: { duration: 1.1, times: [0, 0.55, 1] },
+            }}
+          >
+            {title}
+          </motion.h2>
           <p>{description}</p>
         </div>
 
@@ -148,17 +234,24 @@ export default function LaunchCountdownBanner() {
           <div className="launch-countdown__timer-label">
             <FiClock size={14} /> Time until launch
           </div>
-          <div className="launch-countdown__timer" role="timer" aria-label={srLabel}>
+          <div
+            className="launch-countdown__timer"
+            role="timer"
+            aria-label={srLabel}
+          >
             <TimeUnit value={timeLeft.days} label="Days" />
             <span className="launch-countdown__colon">:</span>
             <TimeUnit value={timeLeft.hours} label="Hours" />
             <span className="launch-countdown__colon">:</span>
             <TimeUnit value={timeLeft.minutes} label="Minutes" />
-            <span className="launch-countdown__colon launch-countdown__colon--seconds">:</span>
+            <span className="launch-countdown__colon launch-countdown__colon--seconds">
+              :
+            </span>
             <TimeUnit value={timeLeft.seconds} label="Seconds" />
           </div>
           <span className="launch-countdown__cta">
-            Shopping starts soon <FiShoppingBag size={15} /> <FiArrowRight size={15} />
+            Shopping starts soon <FiShoppingBag size={15} />{" "}
+            <FiArrowRight size={15} />
           </span>
         </div>
       </div>
