@@ -557,7 +557,9 @@ body {
 .launch-party__message {
   margin: 0 0 22px;
   color: rgba(255, 250, 240, 0.82);
-  font-size: 14px;
+  font-size: clamp(16px, 3vw, 21px);
+  font-weight: 600;
+  line-height: 1.35;
 }
 
 .launch-party__close {

@@ -68,7 +68,10 @@ const PARTY_EMOJIS = [
   "🥳",
 ];
 
-function PartyCelebration({ endText, onClose }) {
+function PartyCelebration({ title, endText, onClose }) {
+  const celebrationText =
+    endText?.trim() || "The countdown has ended. Let's celebrate!";
+
   return createPortal(
     <div
       className="launch-party"
@@ -87,10 +90,8 @@ function PartyCelebration({ endText, onClose }) {
           🎉
         </div>
         <p className="launch-party__eyebrow">The wait is over</p>
-        <h2>{title || "It&apos;s party time!"}</h2>
-        <p className="launch-party__message">
-          {endText || "The countdown has ended. Let's celebrate!"}
-        </p>
+        <h2>{title || "Sehat Potli is launching soon."}</h2>
+        <p className="launch-party__message">{celebrationText}</p>
         <button type="button" className="launch-party__close" onClick={onClose}>
           Start celebrating
         </button>
@@ -172,6 +173,7 @@ export default function LaunchCountdownBanner() {
   if (mounted && showCelebration && config?.enabled && !dismissed) {
     return (
       <PartyCelebration
+        title={"Website is Launched"}
         endText={config.endText}
         onClose={() => setShowCelebration(false)}
       />
