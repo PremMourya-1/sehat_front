@@ -66,10 +66,13 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState("cod");
 
   const [verifyingPayment, setVerifyingPayment] = useState(false);
-  // Set once a prepaid order was created but its Razorpay modal got
-  // dismissed without paying — see openRazorpayModal's onDismiss below.
-  // Holds exactly what handleRetryPayment needs to reopen the SAME order's
-  // checkout: { orderId, orderNumber, razorpayOrderId, razorpayKeyId, amount }.
+  // Set once a checkout attempt was initiated (an AbandonedCheckout, not a
+  // real Order — see controllers/orderController.js createOrder) but its
+  // Razorpay modal got dismissed without paying — see openRazorpayModal's
+  // onDismiss below. Holds exactly what handleRetryPayment needs to reopen
+  // the SAME checkout's Razorpay order: { orderId (really the
+  // abandonedCheckoutId), orderNumber (really checkoutReference),
+  // razorpayOrderId, razorpayKeyId, amount }.
   const [pendingOrder, setPendingOrder] = useState(null);
 
   // Site-wide toggle (Settings > General in the admin panel, see
@@ -184,16 +187,15 @@ export default function CheckoutPage() {
       customerPhone: shipping.shippingPhone,
       onSuccess: handlePaymentSuccess,
       // Fires when the customer closes Razorpay's window (X, Escape,
-      // clicking outside) without completing payment. The order created
-      // just before this modal opened is already sitting at customerStatus
-      // "payment_pending" (see controllers/orderController.js createOrder)
-      // — nothing was charged or stocked out for it yet (stock only
-      // decrements once payment succeeds, see markOrderPaid.js) — so there's
-      // nothing to cancel/restock here. It just stays exactly as it is,
-      // retryable right below via handleRetryPayment, or later from My
-      // Orders; a 24h housekeeping job marks it "payment_failed" if it's
-      // never completed either way (see backend's
-      // utils/abandonedOrderCleanup.js). The cart was never cleared for
+      // clicking outside) without completing payment. No real Order was
+      // ever created for this attempt — only an AbandonedCheckout (see
+      // controllers/orderController.js createOrder) — so there's nothing to
+      // cancel/restock: nothing was ever charged or stocked out. It just
+      // stays exactly as it is, retryable right below via
+      // handleRetryPayment (same razorpayOrderId, reused rather than
+      // starting a fresh Razorpay order); a 24h housekeeping job marks it
+      // "expired" if it's never completed either way (see backend's
+      // utils/abandonedCheckoutCleanup.js). The cart was never cleared for
       // this path (see handlePlaceOrder), so the customer's still looking
       // at this same filled-in checkout form underneath either way.
       onDismiss: () => {
@@ -341,17 +343,20 @@ export default function CheckoutPage() {
         const orderData = res.data.data;
 
         if (paymentMethod === "prepaid" && orderData.razorpay) {
-          // Cart deliberately NOT cleared here — this order isn't paid for
-          // yet (it's sitting at customerStatus "payment_pending", see
-          // controllers/orderController.js). openRazorpayModal's onSuccess
-          // clears it on confirmed payment; its onDismiss leaves the order,
-          // cart and placingOrder exactly as they are (see there for why) so
-          // the customer is still looking at a normal, usable checkout form
-          // either way, with a Retry Payment option if they dismissed it.
+          // No real Order exists yet — orderData is only an
+          // abandonedCheckoutId + Razorpay init details (see
+          // controllers/orderController.js createOrder). Cart deliberately
+          // NOT cleared here either, for the same reason: nothing's
+          // confirmed yet. openRazorpayModal's onSuccess clears it once
+          // payment actually succeeds and a real Order gets created (see
+          // utils/convertAbandonedCheckout.js); its onDismiss leaves the
+          // cart and placingOrder exactly as they are (see there for why)
+          // so the customer is still looking at a normal, usable checkout
+          // form either way, with a Retry Payment option if they dismissed it.
           openRazorpayModal({
             ...orderData.razorpay,
-            orderNumber: orderData.orderNumber,
-            orderId: orderData.id,
+            orderNumber: orderData.checkoutReference,
+            orderId: orderData.abandonedCheckoutId,
           });
         } else {
           dispatch(clearCart());
