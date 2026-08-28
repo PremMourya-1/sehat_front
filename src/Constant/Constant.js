@@ -62,6 +62,8 @@ export const ORDER_STATUS_LABELS = {
 // delivered/rto are driven by Shiprocket's status webhook (see backend
 // utils/shiprocket.js handleShiprocketStatusWebhook).
 export const CUSTOMER_STATUS_LABELS = {
+  payment_pending: "Payment Pending",
+  payment_failed: "Payment Failed",
   confirmed: "Order Confirmed",
   dispatched: "Dispatched",
   picked_up: "Picked Up",

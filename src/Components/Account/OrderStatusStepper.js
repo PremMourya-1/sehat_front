@@ -1,4 +1,4 @@
-import { FiCheck, FiHome, FiMapPin, FiPackage, FiRotateCcw, FiTruck, FiXCircle } from "react-icons/fi";
+import { FiAlertCircle, FiCheck, FiHome, FiMapPin, FiPackage, FiRotateCcw, FiTruck, FiXCircle } from "react-icons/fi";
 import { CUSTOMER_STATUS_LABELS } from "@/Constant/Constant";
 import { formatDateTime } from "@/Utils/utils";
 
@@ -20,6 +20,39 @@ const STEP_ICONS = {
 };
 
 export default function OrderStatusStepper({ customerStatus, statusHistory }) {
+  // These two sit BEFORE the normal sequence, not a branch off it (unlike
+  // rto/cancelled below) — a prepaid order that hasn't paid yet was never
+  // "confirmed" in the first place, so there's no progress to show. Short-
+  // circuits before the step list even renders.
+  if (customerStatus === "payment_pending" || customerStatus === "payment_failed") {
+    const isFailed = customerStatus === "payment_failed";
+    return (
+      <div
+        className={`flex items-center gap-3 rounded-xl border p-3 ${
+          isFailed ? "border-(--danger)/30 bg-(--danger)/5" : "border-(--accent)/40 bg-(--accent)/10"
+        }`}
+      >
+        <span
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+            isFailed ? "bg-(--danger)/15 text-(--danger)" : "bg-(--accent)/20 text-(--accent-secondary)"
+          }`}
+        >
+          <FiAlertCircle size={16} />
+        </span>
+        <div>
+          <p className={`text-sm font-medium ${isFailed ? "text-(--danger)" : "text-(--foreground)"}`}>
+            {CUSTOMER_STATUS_LABELS[customerStatus]}
+          </p>
+          <p className="text-xs text-(--secondary-text)">
+            {isFailed
+              ? "This order was never paid for and won't be processed."
+              : "We're waiting on payment to confirm this order."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const isRto = customerStatus === "rto";
   const isCancelled = customerStatus === "cancelled";
   // Both are terminal branches off the normal sequence, not a position

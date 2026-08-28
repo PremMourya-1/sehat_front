@@ -5,14 +5,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import toast from "react-hot-toast";
-import { FiAlertTriangle, FiChevronRight, FiExternalLink, FiPackage, FiTruck, FiXCircle } from "react-icons/fi";
-import { orderApi } from "@/Service/api";
+import { FiAlertTriangle, FiChevronRight, FiCreditCard, FiExternalLink, FiPackage, FiTruck, FiXCircle } from "react-icons/fi";
+import { checkoutApi, orderApi } from "@/Service/api";
 import { CUSTOMER_STATUS_LABELS } from "@/Constant/Constant";
 import Card from "@/Components/Card/Card";
 import Button from "@/Components/Button/Button";
 import Loader from "@/Components/Common/Loader/Loader";
 import OrderStatusStepper from "@/Components/Account/OrderStatusStepper";
 import ReviewPrompt from "@/Components/Account/ReviewPrompt";
+import { openRazorpayCheckout } from "@/Utils/razorpayCheckout";
 import { formatDate, formatPrice, resolveImageUrl } from "@/Utils/utils";
 
 export default function OrderDetailPage() {
@@ -30,6 +31,13 @@ export default function OrderDetailPage() {
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelling, setCancelling] = useState(false);
+
+  // "Complete Payment" — offered while customerStatus is "payment_pending"
+  // (see Components/Account/OrderStatusStepper.js for how that state is
+  // shown). Reopens the SAME Razorpay order this order was created with
+  // (order.razorpayOrderId), same shared helper the checkout page's own
+  // retry uses — see Utils/razorpayCheckout.js.
+  const [retryingPayment, setRetryingPayment] = useState(false);
 
   useEffect(() => {
     let ignore = false;
@@ -76,6 +84,49 @@ export default function OrderDetailPage() {
     } finally {
       setCancelling(false);
     }
+  };
+
+  const handleCompletePayment = async () => {
+    if (!order?.razorpayOrderId || !order?.razorpayKeyId) {
+      toast.error("Payment isn't available for this order right now — please contact support.");
+      return;
+    }
+    setRetryingPayment(true);
+    await openRazorpayCheckout({
+      razorpayOrderId: order.razorpayOrderId,
+      razorpayKeyId: order.razorpayKeyId,
+      amount: Math.round(Number(order.total) * 100),
+      orderNumber: order.orderNumber,
+      customerName: order.shippingName,
+      customerPhone: order.shippingPhone,
+      onSuccess: async (response) => {
+        try {
+          const res = await checkoutApi.verifyPayment({
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature,
+          });
+          if (res.data.action) {
+            setOrder(res.data.data);
+            toast.success("Payment successful! Order confirmed.");
+          } else {
+            toast.error(res.data.message || "Payment verification failed. Please contact support with your payment ID.");
+          }
+        } catch (error) {
+          toast.error(
+            error?.response?.data?.message ||
+              "Payment verification failed. If money was deducted, please contact support with your payment ID.",
+          );
+        } finally {
+          setRetryingPayment(false);
+        }
+      },
+      onDismiss: () => setRetryingPayment(false),
+      onLoadFailure: () => {
+        toast.error("Could not load the payment gateway. Please retry.");
+        setRetryingPayment(false);
+      },
+    });
   };
 
   if (loading) return <Loader />;
@@ -140,6 +191,19 @@ export default function OrderDetailPage() {
               <p className="mt-2 text-sm font-medium text-(--foreground)">
                 Estimated Delivery: {formatDate(order.estimatedDeliveryDate)}
               </p>
+            )}
+
+            {order.customerStatus === "payment_pending" && (
+              <div className="mt-4 border-t border-(--border-color) pt-4">
+                <Button
+                  type="button"
+                  icon={FiCreditCard}
+                  onClick={handleCompletePayment}
+                  disabled={retryingPayment}
+                >
+                  {retryingPayment ? "Opening Payment..." : "Complete Payment"}
+                </Button>
+              </div>
             )}
 
             {order.customerStatus === "cancelled" && (

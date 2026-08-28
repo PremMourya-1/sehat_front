@@ -24,7 +24,7 @@ import Loader from "@/Components/Common/Loader/Loader";
 import MobileVerification from "@/Components/Checkout/MobileVerification";
 import FloatingLabelInput from "@/Components/Form/FloatingLabelInput";
 import { formatPrice } from "@/Utils/utils";
-import { loadRazorpayScript } from "@/Utils/loadRazorpayScript";
+import { openRazorpayCheckout } from "@/Utils/razorpayCheckout";
 import { expandCartItems } from "@/Utils/cartExpansion";
 
 const PINCODE_REGEX = /^[0-9]{6}$/;
@@ -66,6 +66,11 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState("cod");
 
   const [verifyingPayment, setVerifyingPayment] = useState(false);
+  // Set once a prepaid order was created but its Razorpay modal got
+  // dismissed without paying — see openRazorpayModal's onDismiss below.
+  // Holds exactly what handleRetryPayment needs to reopen the SAME order's
+  // checkout: { orderId, orderNumber, razorpayOrderId, razorpayKeyId, amount }.
+  const [pendingOrder, setPendingOrder] = useState(null);
 
   // Site-wide toggle (Settings > General in the admin panel, see
   // utils/webSettings.js mobileVerificationRequired) — off by default since
@@ -146,6 +151,7 @@ export default function CheckoutPage() {
         // it's deliberately still intact if the customer gets this far and
         // then backs out.
         dispatch(clearCart());
+        setPendingOrder(null);
         toast.success("Payment successful! Order confirmed.");
         router.push(`/account/orders/${res.data.data.id}`);
       } else {
@@ -167,52 +173,45 @@ export default function CheckoutPage() {
   // never swaps this page's own content away either: it's a modal overlay
   // on top of the checkout form, which stays exactly as the customer left
   // it underneath. That matters specifically for what happens if they close
-  // it without paying — see ondismiss below.
+  // it without paying — see onDismiss below.
   const openRazorpayModal = async ({ razorpayOrderId, razorpayKeyId, amount, orderNumber, orderId }) => {
-    const loaded = await loadRazorpayScript();
-    if (!loaded || typeof window === "undefined" || !window.Razorpay) {
-      toast.error("Could not load the payment gateway. Please retry.");
-      setPlacingOrder(false);
-      return;
-    }
-
-    const rzp = new window.Razorpay({
-      key: razorpayKeyId,
+    await openRazorpayCheckout({
+      razorpayOrderId,
+      razorpayKeyId,
       amount,
-      currency: "INR",
-      order_id: razorpayOrderId,
-      name: "Sehat Potli",
-      description: `Order ${orderNumber}`,
-      prefill: { name: shipping.shippingName, contact: shipping.shippingPhone },
-      theme: { color: "#2E4A3B" },
-      handler: (response) => handlePaymentSuccess(response),
-      modal: {
-        // Fires when the customer closes Razorpay's window (X, Escape,
-        // clicking outside) without completing payment. The order created
-        // just before this modal opened was never actually paid for, so it
-        // gets cancelled here the same way the customer's own "Cancel
-        // Order" button would (restocks the items, no-ops the refund since
-        // nothing was ever charged) — instead of lingering as an
-        // unfulfillable "prepaid, unpaid" order that later breaks admin
-        // label generation. The cart was never cleared for this path (see
-        // handlePlaceOrder), so the customer lands right back on this same
-        // filled-in checkout form, not a separate retry/pay-later screen.
-        ondismiss: async () => {
-          try {
-            await orderApi.cancel(orderId, "Payment window closed before completing payment");
-          } catch {
-            // Best-effort — even if this fails (e.g. some other path
-            // already cancelled it), the customer still lands back on a
-            // normal, usable checkout page either way.
-          }
-          toast("Payment wasn't completed, so that order was cancelled. Feel free to try again.");
-          setPlacingOrder(false);
-        },
+      orderNumber,
+      customerName: shipping.shippingName,
+      customerPhone: shipping.shippingPhone,
+      onSuccess: handlePaymentSuccess,
+      // Fires when the customer closes Razorpay's window (X, Escape,
+      // clicking outside) without completing payment. The order created
+      // just before this modal opened is already sitting at customerStatus
+      // "payment_pending" (see controllers/orderController.js createOrder)
+      // — nothing was charged or stocked out for it yet (stock only
+      // decrements once payment succeeds, see markOrderPaid.js) — so there's
+      // nothing to cancel/restock here. It just stays exactly as it is,
+      // retryable right below via handleRetryPayment, or later from My
+      // Orders; a 24h housekeeping job marks it "payment_failed" if it's
+      // never completed either way (see backend's
+      // utils/abandonedOrderCleanup.js). The cart was never cleared for
+      // this path (see handlePlaceOrder), so the customer's still looking
+      // at this same filled-in checkout form underneath either way.
+      onDismiss: () => {
+        setPendingOrder({ orderId, orderNumber, razorpayOrderId, razorpayKeyId, amount });
+        setPlacingOrder(false);
+        toast("Payment wasn't completed. You can retry below whenever you're ready.");
+      },
+      onLoadFailure: () => {
+        toast.error("Could not load the payment gateway. Please retry.");
+        setPlacingOrder(false);
       },
     });
+  };
 
-    rzp.on("payment.failed", () => toast.error("Payment failed. Please retry."));
-    rzp.open();
+  const handleRetryPayment = () => {
+    if (!pendingOrder || placingOrder) return;
+    setPlacingOrder(true);
+    openRazorpayModal(pendingOrder);
   };
 
   if (status === "loading" || configLoading) return <Loader fullScreen />;
@@ -343,10 +342,12 @@ export default function CheckoutPage() {
 
         if (paymentMethod === "prepaid" && orderData.razorpay) {
           // Cart deliberately NOT cleared here — this order isn't paid for
-          // yet. openRazorpayModal's handler clears it on confirmed
-          // success; its ondismiss cancels this order and leaves the cart
-          // (and placingOrder) exactly as they are so the customer is still
-          // looking at a normal, usable checkout form either way.
+          // yet (it's sitting at customerStatus "payment_pending", see
+          // controllers/orderController.js). openRazorpayModal's onSuccess
+          // clears it on confirmed payment; its onDismiss leaves the order,
+          // cart and placingOrder exactly as they are (see there for why) so
+          // the customer is still looking at a normal, usable checkout form
+          // either way, with a Retry Payment option if they dismissed it.
           openRazorpayModal({
             ...orderData.razorpay,
             orderNumber: orderData.orderNumber,
@@ -635,9 +636,34 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          <Button type="submit" className="mt-6 w-full" disabled={!canPlaceOrder || placingOrder}>
-            {placingOrder ? "Placing Order..." : "Place Order"}
-          </Button>
+          {pendingOrder ? (
+            <div className="mt-6 rounded-xl border border-(--accent)/40 bg-(--accent)/10 p-4">
+              <p className="flex items-center gap-1.5 text-sm font-medium text-(--foreground)">
+                <FiAlertCircle size={15} className="text-(--accent-secondary)" />
+                Payment wasn&apos;t completed for order {pendingOrder.orderNumber}
+              </p>
+              <p className="mt-1 text-xs text-(--secondary-text)">
+                Your order is saved — complete the payment to confirm it, or start over below.
+              </p>
+              <div className="mt-3 flex gap-2">
+                <Button type="button" onClick={handleRetryPayment} disabled={placingOrder} className="flex-1">
+                  {placingOrder ? "Opening Payment..." : "Retry Payment"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setPendingOrder(null)}
+                  disabled={placingOrder}
+                >
+                  Start Over
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button type="submit" className="mt-6 w-full" disabled={!canPlaceOrder || placingOrder}>
+              {placingOrder ? "Placing Order..." : "Place Order"}
+            </Button>
+          )}
           <p className="mt-4 flex items-center justify-center gap-1.5 text-xs text-(--secondary-text)">
             <FiLock size={13} className="text-(--primary)" />
             Secure checkout &middot; Razorpay encrypted payments
