@@ -21,6 +21,7 @@ const cartSlice = createSlice({
     addToCart(state, action) {
       const {
         productId,
+        slug,
         variantId,
         weight,
         price,
@@ -40,6 +41,7 @@ const cartSlice = createSlice({
       } else {
         state.items.push({
           productId,
+          slug: slug || null,
           variantId,
           weight,
           price,

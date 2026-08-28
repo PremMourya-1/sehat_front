@@ -13,6 +13,7 @@ import {
   formatPrice,
   getDefaultVariant,
   getDiscountPercent,
+  getProductUrl,
   resolveImageUrl,
   sortVariants,
 } from "@/Utils/utils";
@@ -74,7 +75,7 @@ export default function ProductCard({ product }) {
       <div className="group flex min-w-0 flex-col rounded-2xl border border-(--border-color) bg-(--surface) p-3 shadow-sm transition-shadow hover:shadow-md max-md:p-2">
         <div className="relative overflow-hidden rounded-xl bg-(--surface-alt)">
           <Link
-            href={`/products/${product.id}`}
+            href={getProductUrl(product)}
             className="relative block aspect-square"
           >
             <Image
@@ -120,7 +121,7 @@ export default function ProductCard({ product }) {
         </div>
 
         <div className="mt-3 flex flex-1 flex-col gap-2 max-md:mt-2 max-md:gap-1.5">
-          <Link href={`/products/${product.id}`}>
+          <Link href={getProductUrl(product)}>
             <h3 className="font-heading text-lg text-(--foreground) line-clamp-1 max-md:text-sm">
               {product.name}
             </h3>
@@ -261,7 +262,7 @@ export default function ProductCard({ product }) {
                   />
                 )}
                 <Link
-                  href={`/products/${product.id}`}
+                  href={getProductUrl(product)}
                   className="text-center text-sm font-medium text-(--primary) underline"
                   onClick={() => setQuickViewOpen(false)}
                 >

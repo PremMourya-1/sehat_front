@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { FiSearch, FiX } from "react-icons/fi";
 import { productApi } from "@/Service/api";
 import useDebounce from "@/Hooks/useDebounce";
-import { formatPrice, getDefaultVariant, resolveImageUrl } from "@/Utils/utils";
+import { formatPrice, getDefaultVariant, getProductUrl, resolveImageUrl } from "@/Utils/utils";
 
 // Header search: one icon button, one overlay that works for both desktop
 // and mobile — full-bleed from the top edge on mobile, a centered rounded
@@ -77,9 +77,9 @@ export default function HeaderSearch() {
     };
   }, [debouncedQuery]);
 
-  const goToProduct = (id) => {
+  const goToProduct = (product) => {
     close();
-    router.push(`/products/${id}`);
+    router.push(getProductUrl(product));
   };
 
   return (
@@ -153,7 +153,7 @@ export default function HeaderSearch() {
                       <button
                         key={product.id}
                         type="button"
-                        onClick={() => goToProduct(product.id)}
+                        onClick={() => goToProduct(product)}
                         className="flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-colors hover:bg-(--surface-alt)"
                       >
                         <span className="relative block h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-(--border-color) bg-(--surface-alt)">

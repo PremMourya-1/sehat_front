@@ -57,6 +57,19 @@ export const getDefaultVariant = (variants = []) => {
 export const sortVariants = (variants = []) =>
   [...variants].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
+// The single place every product-detail link is built from — slug if the
+// product has one (set on create/edit, see backend utils/generateSlug.js),
+// else its id. A product saved before this feature existed (slug: null)
+// keeps resolving to its current UUID URL exactly as before; nothing
+// breaks, nothing needs a backfill. Accepts either a full product object
+// or a plain {slug, id}/{slug, productId} shape (cart lines don't carry a
+// full product object, just these two fields — see cartSlice.js).
+export const getProductUrl = (product) => {
+  if (!product) return "/products";
+  const identifier = product.slug || product.id || product.productId;
+  return `/products/${identifier}`;
+};
+
 export const resolveImageUrl = (path) => {
   if (!path) return "/product-placeholder.svg";
   if (path.startsWith("http://") || path.startsWith("https://")) return path;

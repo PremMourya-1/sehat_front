@@ -48,6 +48,11 @@ export default function AddToCartButton({
 
   const buildCartLine = () => ({
     productId: product.id,
+    // Carried through so cart/page.js can link straight to the product
+    // without needing to re-fetch it — see Utils/utils.js getProductUrl.
+    // null for a product that hasn't been given one yet; the cart page
+    // falls back to productId in that case, same as everywhere else.
+    slug: product.slug || null,
     variantId: variant.id,
     weight: variant.weight,
     price: variant.price,

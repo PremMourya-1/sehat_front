@@ -20,7 +20,7 @@ import { openAuthModal } from "@/Store/Slices/uiSlice";
 import Button from "@/Components/Button/Button";
 import Card from "@/Components/Card/Card";
 import CartFillProgress from "@/Components/Cart/CartFillProgress";
-import { formatPrice, resolveImageUrl } from "@/Utils/utils";
+import { formatPrice, getProductUrl, resolveImageUrl } from "@/Utils/utils";
 
 export default function CartPage() {
   const dispatch = useDispatch();
@@ -145,7 +145,7 @@ export default function CartPage() {
                       ) : (
                         <>
                           <Link
-                            href={`/products/${item.productId}`}
+                            href={getProductUrl(item)}
                             className="font-medium text-(--foreground) hover:text-(--primary)"
                           >
                             {item.name}
