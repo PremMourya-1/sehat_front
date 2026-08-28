@@ -22,6 +22,7 @@ import Button from "@/Components/Button/Button";
 import Card from "@/Components/Card/Card";
 import Loader from "@/Components/Common/Loader/Loader";
 import MobileVerification from "@/Components/Checkout/MobileVerification";
+import VerifiedMobileField from "@/Components/Checkout/VerifiedMobileField";
 import FloatingLabelInput from "@/Components/Form/FloatingLabelInput";
 import { formatPrice } from "@/Utils/utils";
 import { openRazorpayCheckout } from "@/Utils/razorpayCheckout";
@@ -473,16 +474,10 @@ export default function CheckoutPage() {
                 disabled={!pincodeVerified}
                 className={DISABLED_FIELD_CLASS}
               />
-              <FloatingLabelInput
-                id="shipping-phone"
-                required
-                type="tel"
-                label="Phone number"
-                pattern="[0-9]{10}"
+              <VerifiedMobileField
                 value={shipping.shippingPhone}
-                onChange={handleShippingChange("shippingPhone")}
+                onChange={(newValue) => setShipping((prev) => ({ ...prev, shippingPhone: newValue }))}
                 disabled={!pincodeVerified}
-                className={DISABLED_FIELD_CLASS}
               />
               <FloatingLabelInput
                 id="shipping-alternate-mobile"
