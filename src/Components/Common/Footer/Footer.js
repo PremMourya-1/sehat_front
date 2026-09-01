@@ -167,7 +167,15 @@ export default function Footer() {
       </div>
 
       <div className="relative z-10 border-t border-(--surface)/10 px-8 py-4 text-center text-xs text-(--surface)/60 max-md:px-4">
-        &copy; {year} {BRAND_NAME}. All rights reserved.
+        &copy; {year} {BRAND_NAME}. All rights reserved. ·{" "}
+        <a
+          href="https://softwayx.in"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="transition-colors hover:text-(--accent)"
+        >
+          Designed &amp; Developed by softwayx.in
+        </a>
       </div>
     </footer>
   );
