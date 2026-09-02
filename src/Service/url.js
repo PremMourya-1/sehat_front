@@ -60,6 +60,7 @@ export const orderUrl = {
   create: "/orders",
   list: "/orders",
   recent: "/orders/recent",
+  lastShipping: "/orders/last-shipping",
   byId: (id) => `/orders/${id}`,
   cancel: (id) => `/orders/${id}/cancel`,
 };

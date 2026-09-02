@@ -7,7 +7,7 @@ import Google from "next-auth/providers/google";
 // below.
 // import Resend from "next-auth/providers/resend";
 import Credentials from "next-auth/providers/credentials";
-import { authAdapter, verifyCredentials } from "@/lib/authAdapter";
+import { authAdapter, verifyCredentials, verifyImpersonationToken } from "@/lib/authAdapter";
 import { issueApiToken } from "@/lib/issueApiToken";
 
 const API_TOKEN_REFRESH_MARGIN_MS = 5 * 60 * 1000; // re-mint 5 min before expiry
@@ -127,9 +127,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return result.user;
       },
     }),
+    // Admin panel's "Login as Customer" tool — never reachable from any
+    // sign-in UI (no page links to it), only via the app/api/impersonate
+    // route handler, which calls signIn("impersonation", ...) server-side
+    // with a short-lived ticket sehat-potli-backend already generated and
+    // audit-logged. Deliberately skips the EmailNotVerifiedError gate the
+    // "credentials" provider enforces above — an admin viewing a real
+    // customer's account isn't the customer completing their own
+    // registration, so that gate doesn't apply here.
+    Credentials({
+      id: "impersonation",
+      name: "Admin Impersonation",
+      credentials: {
+        token: { label: "Token", type: "text" },
+      },
+      async authorize(credentials) {
+        const result = await verifyImpersonationToken(credentials?.token);
+        if (result.status !== "ok") return null;
+        return result.user;
+      },
+    }),
   ],
   callbacks: {
-    async jwt({ token, user, trigger, session }) {
+    async jwt({ token, user, account, trigger, session }) {
       if (user) {
         token.id = user.id;
         token.name = user.name;
@@ -137,6 +157,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.image = user.image;
         token.mobileNumber = user.mobileNumber;
         token.mobileVerified = user.mobileVerified;
+        // Purely diagnostic — nothing reads this to change behavior (the
+        // whole point is this session works exactly like a real one, see
+        // the "impersonation" provider's own comment above). Just keeps a
+        // breadcrumb in the session token itself, in case a customer-
+        // reported issue is ever traced back to a support session rather
+        // than the customer's own login.
+        if (account?.provider === "impersonation") token.impersonated = true;
 
         const { token: apiToken, expiresInSeconds } = await issueApiToken(user.id);
         token.apiToken = apiToken;

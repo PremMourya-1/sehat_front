@@ -105,6 +105,10 @@ export const orderApi = {
   create: (data) => apiJson.post(orderUrl.create, data),
   list: (params) => apiJson.get(orderUrl.list, { params }),
   recent: () => apiJson.get(orderUrl.recent),
+  // Just the shipping fields off the customer's single most recent order —
+  // powers checkout's autofill-from-last-order. Returns data: null (not a
+  // 404) for a customer with no past orders yet.
+  lastShipping: () => apiJson.get(orderUrl.lastShipping),
   getById: (id) => apiJson.get(orderUrl.byId(id)),
   // Self-cancel — only works server-side while the order is still
   // "confirmed" (see controllers/orderController.js cancelOrder); reason is

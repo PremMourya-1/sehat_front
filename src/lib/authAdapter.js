@@ -126,3 +126,20 @@ export async function verifyCredentials({ identifier, authCode }) {
   }
   return result || { status: "invalid" };
 }
+
+// Backs the "impersonation" provider (see src/auth.js) — the admin panel's
+// "Login as Customer" tool. `token` is the short-lived, single-purpose
+// ticket sehat-potli-backend's POST /api/admin/customers/:id/impersonate
+// issued; this exchanges it for the same { status, user } shape
+// verifyCredentials returns above, so NextAuth's authorize() treats it
+// identically to a real password login from here on.
+export async function verifyImpersonationToken(token) {
+  const result = await internalFetch("/auth/adapter/verify-impersonation-token", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  });
+  if (result?.status === "ok") {
+    return { status: "ok", user: reviveUser(result.user) };
+  }
+  return result || { status: "invalid" };
+}

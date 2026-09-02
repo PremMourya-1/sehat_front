@@ -29,7 +29,6 @@ import { openRazorpayCheckout } from "@/Utils/razorpayCheckout";
 import { expandCartItems } from "@/Utils/cartExpansion";
 
 const PINCODE_REGEX = /^[0-9]{6}$/;
-const DISABLED_FIELD_CLASS = "disabled:cursor-not-allowed disabled:opacity-50";
 
 const initialShipping = {
   shippingName: "",
@@ -90,6 +89,38 @@ export default function CheckoutPage() {
       dispatch(openAuthModal({ view: "login", redirectTo: "/checkout" }));
     }
   }, [status, dispatch]);
+
+  // Autofill Step 2 from the customer's most recent past order (name/phone/
+  // alternate mobile/address, plus the pincode they used then — Step 1
+  // still has to be re-run and pass on it, see the pincode input below,
+  // since serviceability can change). Guarded so it only ever fills in
+  // still-empty fields — never overwrites anything the customer already
+  // typed themselves, and a first-time customer's `lastShipping` call just
+  // resolves to null, leaving the form exactly as empty as it starts.
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    orderApi
+      .lastShipping()
+      .then((res) => {
+        const last = res.data.action ? res.data.data : null;
+        if (!last) return;
+        setShipping((prev) =>
+          prev.shippingName || prev.shippingPhone || prev.alternateMobile || prev.shippingAddress
+            ? prev
+            : {
+                shippingName: last.shippingName || "",
+                shippingPhone: last.shippingPhone || "",
+                alternateMobile: last.alternateMobile || "",
+                shippingAddress: last.shippingAddress || "",
+              },
+        );
+        setPincode((prev) => prev || last.shippingPincode || "");
+      })
+      .catch(() => {
+        // Autofill is a convenience, not a requirement — a failed fetch
+        // just leaves the form empty, same as a first-time customer.
+      });
+  }, [status]);
 
   useEffect(() => {
     checkoutApi
@@ -456,95 +487,94 @@ export default function CheckoutPage() {
               )}
             </div>
 
-            <div className="my-5 border-t border-(--border-color)" />
+            {/* Step 2 is now fully unrendered (not just disabled/grayed)
+                until pincodeVerified — a stricter version of the previous
+                gate. Every `disabled`/opacity check that used to key off
+                !pincodeVerified is gone too, since it's dead once this
+                whole block only ever mounts already-verified. */}
+            {pincodeVerified && (
+              <>
+                <div className="my-5 border-t border-(--border-color)" />
 
-            <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-(--foreground)">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-(--primary) text-xs text-(--surface)">
-                2
-              </span>
-              Your Details
-            </p>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <FloatingLabelInput
-                id="shipping-name"
-                required
-                label="Full name"
-                value={shipping.shippingName}
-                onChange={handleShippingChange("shippingName")}
-                disabled={!pincodeVerified}
-                className={DISABLED_FIELD_CLASS}
-              />
-              <VerifiedMobileField
-                value={shipping.shippingPhone}
-                onChange={(newValue) => setShipping((prev) => ({ ...prev, shippingPhone: newValue }))}
-                disabled={!pincodeVerified}
-              />
-              <FloatingLabelInput
-                id="shipping-alternate-mobile"
-                type="tel"
-                label="Alternate mobile number (optional)"
-                pattern="[0-9]{10}"
-                title="Enter a 10-digit mobile number"
-                value={shipping.alternateMobile}
-                onChange={handleShippingChange("alternateMobile")}
-                disabled={!pincodeVerified}
-                className={DISABLED_FIELD_CLASS}
-              />
-              <FloatingLabelInput
-                id="shipping-address"
-                required
-                label="Address"
-                value={shipping.shippingAddress}
-                onChange={handleShippingChange("shippingAddress")}
-                disabled={!pincodeVerified}
-                className={DISABLED_FIELD_CLASS}
-                wrapperClassName="sm:col-span-2"
-              />
-            </div>
-
-            <p className="mb-3 mt-5 text-sm font-semibold text-(--foreground)">Payment Method</p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label
-                className={`flex cursor-pointer flex-col gap-1 rounded-lg border p-3 transition-colors ${
-                  paymentMethod === "cod" ? "border-(--primary) bg-(--surface-alt)" : "border-(--border-color)"
-                } ${!pincodeVerified || !codOffered ? "cursor-not-allowed opacity-50" : ""}`}
-              >
-                <span className="flex items-center gap-2 text-sm font-medium text-(--foreground)">
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="cod"
-                    checked={paymentMethod === "cod"}
-                    onChange={() => setPaymentMethod("cod")}
-                    disabled={!pincodeVerified || !codOffered}
-                    className="h-4 w-4 accent-(--primary)"
+                <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-(--foreground)">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-(--primary) text-xs text-(--surface)">
+                    2
+                  </span>
+                  Your Details
+                </p>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <FloatingLabelInput
+                    id="shipping-name"
+                    required
+                    label="Full name"
+                    value={shipping.shippingName}
+                    onChange={handleShippingChange("shippingName")}
                   />
-                  <FiTruck size={16} className="text-(--primary)" />
-                  Cash on Delivery
-                </span>
-                {pincodeVerified && codDisabledReason && (
-                  <span className="text-xs text-(--danger)">{codDisabledReason}</span>
-                )}
-              </label>
+                  <VerifiedMobileField
+                    value={shipping.shippingPhone}
+                    onChange={(newValue) => setShipping((prev) => ({ ...prev, shippingPhone: newValue }))}
+                  />
+                  <FloatingLabelInput
+                    id="shipping-alternate-mobile"
+                    type="tel"
+                    label="Alternate mobile number (optional)"
+                    pattern="[0-9]{10}"
+                    title="Enter a 10-digit mobile number"
+                    value={shipping.alternateMobile}
+                    onChange={handleShippingChange("alternateMobile")}
+                  />
+                  <FloatingLabelInput
+                    id="shipping-address"
+                    required
+                    label="Address"
+                    value={shipping.shippingAddress}
+                    onChange={handleShippingChange("shippingAddress")}
+                    wrapperClassName="sm:col-span-2"
+                  />
+                </div>
 
-              <label
-                className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 transition-colors ${
-                  paymentMethod === "prepaid" ? "border-(--primary) bg-(--surface-alt)" : "border-(--border-color)"
-                } ${!pincodeVerified ? "cursor-not-allowed opacity-50" : ""}`}
-              >
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="prepaid"
-                  checked={paymentMethod === "prepaid"}
-                  onChange={() => setPaymentMethod("prepaid")}
-                  disabled={!pincodeVerified}
-                  className="h-4 w-4 accent-(--primary)"
-                />
-                <FiCreditCard size={16} className="text-(--primary)" />
-                <span className="text-sm font-medium text-(--foreground)">Pay Online</span>
-              </label>
-            </div>
+                <p className="mb-3 mt-5 text-sm font-semibold text-(--foreground)">Payment Method</p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <label
+                    className={`flex cursor-pointer flex-col gap-1 rounded-lg border p-3 transition-colors ${
+                      paymentMethod === "cod" ? "border-(--primary) bg-(--surface-alt)" : "border-(--border-color)"
+                    } ${!codOffered ? "cursor-not-allowed opacity-50" : ""}`}
+                  >
+                    <span className="flex items-center gap-2 text-sm font-medium text-(--foreground)">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="cod"
+                        checked={paymentMethod === "cod"}
+                        onChange={() => setPaymentMethod("cod")}
+                        disabled={!codOffered}
+                        className="h-4 w-4 accent-(--primary)"
+                      />
+                      <FiTruck size={16} className="text-(--primary)" />
+                      Cash on Delivery
+                    </span>
+                    {codDisabledReason && <span className="text-xs text-(--danger)">{codDisabledReason}</span>}
+                  </label>
+
+                  <label
+                    className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 transition-colors ${
+                      paymentMethod === "prepaid" ? "border-(--primary) bg-(--surface-alt)" : "border-(--border-color)"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="prepaid"
+                      checked={paymentMethod === "prepaid"}
+                      onChange={() => setPaymentMethod("prepaid")}
+                      className="h-4 w-4 accent-(--primary)"
+                    />
+                    <FiCreditCard size={16} className="text-(--primary)" />
+                    <span className="text-sm font-medium text-(--foreground)">Pay Online</span>
+                  </label>
+                </div>
+              </>
+            )}
           </Card>
 
           <Card>
