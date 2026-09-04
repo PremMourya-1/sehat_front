@@ -21,7 +21,18 @@ export default function StepIndicator({ currentStep }) {
         const isLast = index === STEPS.length - 1;
 
         return (
-          <div key={step} className={`flex items-center ${isLast ? "" : "flex-1"}`}>
+          // items-start (not items-center) on purpose: the sibling line
+          // below is vertically positioned with its own mt-4.25 (17px), measured
+          // against the circle's fixed h-9 (36px) size — 17px + half the
+          // line's own 2px height (1px) = 18px = exactly the circle's
+          // vertical center. items-center would instead center the line
+          // against this row's full height (circle + gap + label), pulling
+          // it down toward the label on every screen where the label is
+          // visible — the misalignment this replaces. Both circle and line
+          // heights are fixed (not responsive), so this stays exact on
+          // every device, including mobile where the label is hidden
+          // (max-sm:hidden) and the row shrinks to just the circle's height.
+          <div key={step} className={`flex items-start ${isLast ? "" : "flex-1"}`}>
             <div className="flex flex-col items-center gap-1.5">
               <motion.span
                 initial={false}
@@ -46,7 +57,7 @@ export default function StepIndicator({ currentStep }) {
               </span>
             </div>
             {!isLast && (
-              <div className="mx-2 h-0.5 flex-1 overflow-hidden rounded-full bg-(--border-color) sm:mx-1.5">
+              <div className="mx-2 mt-4.25 h-0.5 flex-1 shrink-0 overflow-hidden rounded-full bg-(--border-color) sm:mx-1.5">
                 <motion.div
                   className="h-full bg-(--primary)"
                   initial={false}
